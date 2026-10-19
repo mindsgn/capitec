@@ -1,10 +1,13 @@
+import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { cn } from '@/lib/utils'
 
 export interface SkipLinkProps {
   /** Target id of the main content. Defaults to `main-content`. */
   targetId?: string
-  /** Link text. */
-  children?: string
+  /** Link text. Defaults to the translated accessible name. */
+  children?: ReactNode
   className?: string
 }
 
@@ -16,9 +19,12 @@ export interface SkipLinkProps {
  */
 export function SkipLink({
   targetId = 'main-content',
-  children = 'Skip to main content',
+  children,
   className,
 }: SkipLinkProps) {
+  const { t } = useTranslation('accessibility')
+  const content = children ?? t('skipLink')
+
   return (
     <a
       href={`#${targetId}`}
@@ -28,7 +34,7 @@ export function SkipLink({
         className,
       )}
     >
-      {children}
+      {content}
     </a>
   )
 }

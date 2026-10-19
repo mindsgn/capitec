@@ -61,21 +61,27 @@ describe('validateLoanSimulator', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.errors).toEqual([
-        { fieldId: 'loanAmount', message: 'Loan amount cannot be negative.' },
-      ])
+      expect(result.errors).toEqual([{ fieldId: 'loanAmount', key: 'loanAmount.negative' }])
     }
   })
 
-  it('enforces the documented loan amount bounds with one clear message', () => {
+  it('enforces the documented loan amount bounds with one clear key', () => {
     const tooLow = validateLoanSimulator({ ...validValues, loanAmount: '1000' })
     const tooHigh = validateLoanSimulator({ ...validValues, loanAmount: '400000' })
 
     expect(tooLow.success).toBe(false)
     expect(tooHigh.success).toBe(false)
     if (!tooLow.success && !tooHigh.success) {
-      expect(tooLow.errors[0]?.message).toBe('Loan amount must be between R5 000 and R300 000.')
-      expect(tooHigh.errors[0]?.message).toBe('Loan amount must be between R5 000 and R300 000.')
+      expect(tooLow.errors[0]).toEqual({
+        fieldId: 'loanAmount',
+        key: 'loanAmount.range',
+        values: { min: 5_000, max: 300_000, format: 'currency' },
+      })
+      expect(tooHigh.errors[0]).toEqual({
+        fieldId: 'loanAmount',
+        key: 'loanAmount.range',
+        values: { min: 5_000, max: 300_000, format: 'currency' },
+      })
     }
   })
 
@@ -84,7 +90,11 @@ describe('validateLoanSimulator', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.errors[0]?.message).toBe('Loan term must be between 6 and 60 months.')
+      expect(result.errors[0]).toEqual({
+        fieldId: 'loanTerm',
+        key: 'loanTerm.range',
+        values: { min: 6, max: 60, format: 'number' },
+      })
     }
   })
 
@@ -93,7 +103,11 @@ describe('validateLoanSimulator', () => {
 
     expect(result.success).toBe(false)
     if (!result.success) {
-      expect(result.errors[0]?.message).toBe('Minimum monthly income of R5 000 required.')
+      expect(result.errors[0]).toEqual({
+        fieldId: 'monthlyIncome',
+        key: 'monthlyIncome.min',
+        values: { min: 5_000, format: 'currency' },
+      })
     }
   })
 
@@ -113,14 +127,14 @@ describe('validateLoanSimulator', () => {
     if (!result.success) {
       expect(result.errors[0]).toEqual({
         fieldId: 'loanAmount',
-        message: 'Enter a valid loan amount.',
+        key: 'loanAmount.invalid',
       })
     }
   })
 })
 
 describe('toFormErrors', () => {
-  it('maps each Zod issue to its field id and message', () => {
+  it('maps each Zod issue to its field id and translation key', () => {
     const parsed = loanSimulatorSchema.safeParse({
       ...validValues,
       loanAmount: '',
@@ -131,8 +145,8 @@ describe('toFormErrors', () => {
     if (!parsed.success) {
       const errors = toFormErrors(parsed.error)
       expect(errors).toEqual([
-        { fieldId: 'loanAmount', message: 'Enter loan amount.' },
-        { fieldId: 'loanTerm', message: 'Loan term must be between 6 and 60 months.' },
+        { fieldId: 'loanAmount', key: 'loanAmount.required' },
+        { fieldId: 'loanTerm', key: 'loanTerm.range', values: { min: 6, max: 60, format: 'number' } },
       ])
     }
   })

@@ -1,0 +1,16 @@
+{
+  "skipLink": "Skip to main content",
+  "errorPrefix": "Error:",
+  "errorSummary": {
+    "title": "Please correct the following errors"
+  },
+  "tooltip": {
+    "moreInfo": "More information"
+  },
+  "notice": {
+    "info": "Information:",
+    "success": "Success:",
+    "warning": "Warning:",
+    "error": "Error:"
+  }
+}

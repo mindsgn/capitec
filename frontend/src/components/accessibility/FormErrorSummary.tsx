@@ -1,12 +1,14 @@
 import { useEffect, useRef } from 'react'
 import type { MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { FormError } from '@/lib/validation'
 import { cn } from '@/lib/utils'
+import { translateFormError } from '@/i18n/formErrors'
 
 export interface FormErrorSummaryProps {
   errors: readonly FormError[]
-  /** Heading text. Defaults to a clear instruction. */
+  /** Heading text. Defaults to the translated instruction. */
   title?: string
   /**
    * Focus the summary when it first receives errors. Use after an invalid
@@ -28,11 +30,13 @@ export interface FormErrorSummaryProps {
  */
 export function FormErrorSummary({
   errors,
-  title = 'Please correct the following errors',
+  title,
   autoFocus = false,
   id,
   className,
 }: FormErrorSummaryProps) {
+  const { t } = useTranslation('accessibility')
+  const { t: tValidation } = useTranslation('validation')
   const containerRef = useRef<HTMLDivElement>(null)
   const hasErrors = errors.length > 0
   const hadErrors = useRef(false)
@@ -50,6 +54,8 @@ export function FormErrorSummary({
   if (!hasErrors) {
     return null
   }
+
+  const heading = title ?? t('errorSummary.title')
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, fieldId: string) => {
     const target = document.getElementById(fieldId)
@@ -75,7 +81,7 @@ export function FormErrorSummary({
       )}
     >
       <p id={id ? `${id}-title` : undefined} className="font-semibold">
-        {title}
+        {heading}
       </p>
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm">
         {errors.map((error, index) => (
@@ -85,7 +91,7 @@ export function FormErrorSummary({
               onClick={(event) => handleLinkClick(event, error.fieldId)}
               className="underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-              {error.message}
+              {translateFormError(error, tValidation)}
             </a>
           </li>
         ))}

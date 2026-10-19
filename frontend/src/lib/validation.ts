@@ -10,115 +10,136 @@ import { parseCurrency } from './currency'
  * - parses those strings with `parseCurrency`,
  * - rejects empty, invalid, negative, non-finite and out-of-range values,
  * - converts valid strings into numbers for the calculation layer.
+ *
+ * Rules stay independent of presentation: an issue carries a stable code (the
+ * last segment of a translation key) plus the numeric bounds it mentions, and
+ * the UI translates it at render time with `translateFormError`. That keeps
+ * messages correct when the active language changes after a submit.
  */
+
+export type LoanSimulatorFieldId =
+  | 'loanAmount'
+  | 'loanTerm'
+  | 'monthlyIncome'
+  | 'monthlyExpenses'
+  | 'existingDebt'
+
+export type ValidationErrorCode =
+  | 'required'
+  | 'invalid'
+  | 'negative'
+  | 'range'
+  | 'min'
+  | 'positive'
+
+export interface FormErrorValues {
+  min?: number
+  max?: number
+  /** How a bound should be rendered: rand amounts vs plain counts. */
+  format?: 'currency' | 'number'
+}
 
 export interface FormError {
   /** Stable id of the control the error belongs to. */
   fieldId: string
-  /** Human-readable message shown in the error summary and inline. */
-  message: string
+  /** Translation key within the `validation` namespace. */
+  key: string
+  /** Values used for interpolation in translation. */
+  values?: FormErrorValues
+}
+
+function extractValues(params: Record<string, unknown> | undefined): FormErrorValues | undefined {
+  if (!params) return undefined
+  const values: FormErrorValues = {}
+  if (typeof params.min === 'number') {
+    values.min = params.min
+  }
+  if (typeof params.max === 'number') {
+    values.max = params.max
+  }
+  if (params.format === 'currency' || params.format === 'number') {
+    values.format = params.format
+  }
+  return Object.keys(values).length > 0 ? values : undefined
+}
+
+/**
+ * Records a schema issue carrying a stable `ValidationErrorCode` (plus any
+ * bounds it mentions) instead of a sentence, so the UI can translate it later.
+ */
+function addIssue(
+  ctx: z.RefinementCtx,
+  code: ValidationErrorCode,
+  params?: Record<string, unknown>,
+): never {
+  ctx.addIssue(params ? { code: 'custom', message: code, params } : { code: 'custom', message: code })
+  return z.NEVER
 }
 
 function currencyAmount(options: {
-  label: string
   required?: boolean
   min?: number
   max?: number
-  minMessage?: string
-  maxMessage?: string
   allowZero?: boolean
 }) {
-  const {
-    label,
-    required = false,
-    min,
-    max,
-    minMessage,
-    maxMessage,
-    allowZero = true,
-  } = options
+  const { required = false, min, max, allowZero = true } = options
 
   return z.string().transform((raw, ctx) => {
     const result = parseCurrency(raw)
 
     if (result.kind === 'empty') {
       if (required) {
-        ctx.addIssue({ code: 'custom', message: `Enter ${label.toLowerCase()}.` })
-        return z.NEVER
+        return addIssue(ctx, 'required')
       }
       return null
     }
 
     if (result.kind === 'invalid') {
-      ctx.addIssue({
-        code: 'custom',
-        message:
-          result.reason === 'negative'
-            ? `${label} cannot be negative.`
-            : `Enter a valid ${label.toLowerCase()}.`,
-      })
-      return z.NEVER
+      return addIssue(ctx, result.reason === 'negative' ? 'negative' : 'invalid')
     }
 
     const { value } = result
 
     if (!allowZero && value === 0) {
-      ctx.addIssue({ code: 'custom', message: `${label} must be greater than zero.` })
-      return z.NEVER
+      return addIssue(ctx, 'positive')
     }
 
     if (min !== undefined && value < min) {
-      ctx.addIssue({
-        code: 'custom',
-        message: minMessage ?? `${label} must be at least ${min}.`,
-      })
-      return z.NEVER
+      return max !== undefined
+        ? addIssue(ctx, 'range', { min, max, format: 'currency' })
+        : addIssue(ctx, 'min', { min, format: 'currency' })
     }
 
     if (max !== undefined && value > max) {
-      ctx.addIssue({
-        code: 'custom',
-        message: maxMessage ?? `${label} must not exceed ${max}.`,
-      })
-      return z.NEVER
+      return addIssue(ctx, 'range', { min, max, format: 'currency' })
     }
 
     return value
   })
 }
 
-const wholeNumber = (options: {
-  label: string
-  min?: number
-  max?: number
-  minMessage?: string
-  maxMessage?: string
-}) => {
-  const { label, min, max, minMessage, maxMessage } = options
+const wholeNumber = (options: { min?: number; max?: number }) => {
+  const { min, max } = options
 
   return z.string().transform((raw, ctx) => {
     const trimmed = raw.trim()
 
     if (trimmed === '') {
-      ctx.addIssue({ code: 'custom', message: `Select ${label.toLowerCase()}.` })
-      return z.NEVER
+      return addIssue(ctx, 'required')
     }
 
     const value = Number(trimmed)
 
     if (!Number.isInteger(value)) {
-      ctx.addIssue({ code: 'custom', message: `Select a valid ${label.toLowerCase()}.` })
-      return z.NEVER
+      return addIssue(ctx, 'invalid')
     }
 
     if (min !== undefined && value < min) {
-      ctx.addIssue({ code: 'custom', message: minMessage ?? `${label} is too small.` })
-      return z.NEVER
+      return addIssue(ctx, 'range', { min, max, format: 'number' })
     }
 
     if (max !== undefined && value > max) {
-      ctx.addIssue({ code: 'custom', message: maxMessage ?? `${label} is too large.` })
-      return z.NEVER
+      return addIssue(ctx, 'range', { min, max, format: 'number' })
     }
 
     return value
@@ -129,35 +150,31 @@ const wholeNumber = (options: {
  * Illustrative loan simulator schema. Limits mirror the documented API
  * validation rules (`LoanEligibilitySimulatorEndpoints.md`).
  */
+export const LOAN_SIMULATOR_LIMITS = {
+  amount: { min: 5_000, max: 300_000 },
+  term: { min: 6, max: 60 },
+  income: { min: 5_000 },
+} as const
+
 export const loanSimulatorSchema = z.object({
   loanAmount: currencyAmount({
-    label: 'Loan amount',
     required: true,
-    min: 5_000,
-    max: 300_000,
-    minMessage: 'Loan amount must be between R5 000 and R300 000.',
-    maxMessage: 'Loan amount must be between R5 000 and R300 000.',
+    min: LOAN_SIMULATOR_LIMITS.amount.min,
+    max: LOAN_SIMULATOR_LIMITS.amount.max,
   }),
   loanTerm: wholeNumber({
-    label: 'Repayment term',
-    min: 6,
-    max: 60,
-    minMessage: 'Loan term must be between 6 and 60 months.',
-    maxMessage: 'Loan term must be between 6 and 60 months.',
+    min: LOAN_SIMULATOR_LIMITS.term.min,
+    max: LOAN_SIMULATOR_LIMITS.term.max,
   }),
   monthlyIncome: currencyAmount({
-    label: 'Monthly income',
     required: true,
-    min: 5_000,
-    minMessage: 'Minimum monthly income of R5 000 required.',
+    min: LOAN_SIMULATOR_LIMITS.income.min,
   }),
   monthlyExpenses: currencyAmount({
-    label: 'Monthly expenses',
     required: true,
     min: 0,
   }),
   existingDebt: currencyAmount({
-    label: 'Existing monthly debt',
     required: false,
     min: 0,
   }),
@@ -166,33 +183,27 @@ export const loanSimulatorSchema = z.object({
 export type LoanSimulatorInput = z.infer<typeof loanSimulatorSchema>
 
 /** The shape before currency strings are parsed into numbers. */
-export interface LoanSimulatorFormValues {
-  loanAmount: string
-  loanTerm: string
-  monthlyIncome: string
-  monthlyExpenses: string
-  existingDebt: string
-}
+export type LoanSimulatorFormValues = Record<LoanSimulatorFieldId, string>
 
-/** The parsed shape handed to the calculation layer: every amount is a number. */
-export interface LoanSimulatorValues {
-  loanAmount: number
-  loanTerm: number
-  monthlyIncome: number
-  monthlyExpenses: number
-  existingDebt: number
-}
+/** The parsed shape handed to the calculation layer: every field is a number. */
+export type LoanSimulatorValues = Record<LoanSimulatorFieldId, number>
 
 /**
- * Maps a Zod error onto the `{ fieldId, message }` shape consumed by
- * `FormErrorSummary`. Field ids are the schema keys, which callers use as the
- * DOM ids of their controls so summary links resolve to the right input.
+ * Maps a Zod error onto the `{ fieldId, key, values }` shape consumed by the
+ * i18n-aware UI. Field ids are the schema keys, which callers use as the DOM
+ * ids of their controls so summary links resolve to the right input.
  */
 export function toFormErrors(error: z.ZodError): FormError[] {
-  return error.issues.map((issue) => ({
-    fieldId: issue.path.length > 0 ? issue.path.join('.') : 'form',
-    message: issue.message,
-  }))
+  return error.issues.map((issue) => {
+    const rawFieldId = issue.path.length > 0 ? String(issue.path[0]) : 'form'
+    const fieldId = rawFieldId === '' ? 'form' : rawFieldId
+    const params = 'params' in issue ? issue.params : undefined
+    return {
+      fieldId,
+      key: `${fieldId}.${issue.message}`,
+      values: extractValues(params),
+    }
+  })
 }
 
 /**

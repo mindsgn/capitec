@@ -11,28 +11,79 @@
  * the calculation layer and unit-tested in isolation.
  */
 
-const zarFormatter = new Intl.NumberFormat('en-ZA', {
-  style: 'currency',
-  currency: 'ZAR',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
-
-const zarWholeFormatter = new Intl.NumberFormat('en-ZA', {
-  style: 'currency',
-  currency: 'ZAR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-})
-
-const decimalFormatter = new Intl.NumberFormat('en-ZA', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-})
+import { CURRENCY_LOCALE } from '@/i18n/config'
 
 export interface ZARFormatOptions {
   /** Show cents. When `false`, amounts are rounded to whole rand. Defaults to `true`. */
   cents?: boolean
+  /** Locale to use for formatting. Defaults to `en-ZA` (South African English). */
+  locale?: string
+}
+
+export interface CurrencyFormatOptions extends ZARFormatOptions {
+  /** Currency code to format with. Defaults to `ZAR`. */
+  currency?: string
+}
+
+const formatters = new Map<string, Intl.NumberFormat>()
+const wholeFormatters = new Map<string, Intl.NumberFormat>()
+const decimalFormatters = new Map<string, Intl.NumberFormat>()
+
+function getCurrencyFormatter(locale: string, cents: boolean, currency: string): Intl.NumberFormat {
+  const key = `${locale}::${cents ? 'cents' : 'whole'}::${currency}`
+  if (cents) {
+    const cached = formatters.get(key)
+    if (cached) return cached
+    const formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    formatters.set(key, formatter)
+    return formatter
+  }
+
+  const cached = wholeFormatters.get(key)
+  if (cached) return cached
+  const formatter = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })
+  wholeFormatters.set(key, formatter)
+  return formatter
+}
+
+function getDecimalFormatter(locale: string): Intl.NumberFormat {
+  const key = `dec::${locale}`
+  const cached = decimalFormatters.get(key)
+  if (cached) return cached
+  const formatter = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+  decimalFormatters.set(key, formatter)
+  return formatter
+}
+
+/**
+ * Formats a finite number as currency using the specified options.
+ * Non-finite values are not valid currency amounts and are formatted as an
+ * empty string so they can never masquerade as a real amount.
+ */
+export function formatCurrency(value: number, options: CurrencyFormatOptions = {}): string {
+  if (!Number.isFinite(value)) {
+    return ''
+  }
+
+  const { cents = true, locale = CURRENCY_LOCALE, currency = 'ZAR' } = options
+  try {
+    return getCurrencyFormatter(locale, cents, currency).format(value)
+  } catch {
+    return getCurrencyFormatter(CURRENCY_LOCALE, cents, currency).format(value)
+  }
 }
 
 /**
@@ -44,17 +95,20 @@ export function formatZAR(value: number, options: ZARFormatOptions = {}): string
   if (!Number.isFinite(value)) {
     return ''
   }
-
-  const { cents = true } = options
-  return cents ? zarFormatter.format(value) : zarWholeFormatter.format(value)
+  return formatCurrency(value, { ...options, currency: 'ZAR' })
 }
 
-/** Formats a plain (non-currency) number using the `en-ZA` locale. */
-export function formatNumber(value: number): string {
+/** Formats a plain (non-currency) number using the provided locale (defaults to `en-ZA`). */
+export function formatNumber(value: number, options: { locale?: string } = {}): string {
   if (!Number.isFinite(value)) {
     return ''
   }
-  return decimalFormatter.format(value)
+  const { locale = CURRENCY_LOCALE } = options
+  try {
+    return getDecimalFormatter(locale).format(value)
+  } catch {
+    return getDecimalFormatter(CURRENCY_LOCALE).format(value)
+  }
 }
 
 export type CurrencyParseError = 'format' | 'negative' | 'non-finite'

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -49,6 +50,7 @@ export function RadioGroup({
   className,
   orientation = 'vertical',
 }: RadioGroupProps) {
+  const { t } = useTranslation('common')
   const ids = useFieldIds({ id, hasHint: Boolean(hint), hasError: Boolean(error) })
 
   return (
@@ -66,7 +68,7 @@ export function RadioGroup({
             <span aria-hidden="true" className="text-danger-foreground">
               *
             </span>
-            <span className="sr-only">(required)</span>
+            <span className="sr-only">{t('states.required')}</span>
           </>
         ) : null}
       </legend>

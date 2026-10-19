@@ -1,0 +1,39 @@
+{
+  "loanAmount": {
+    "required": "Enter loan amount.",
+    "invalid": "Enter a valid loan amount.",
+    "negative": "Loan amount cannot be negative.",
+    "positive": "Loan amount must be greater than zero.",
+    "range": "Loan amount must be between {{min}} and {{max}}."
+  },
+  "loanTerm": {
+    "required": "Select repayment term.",
+    "invalid": "Select a valid repayment term.",
+    "range": "Loan term must be between {{min}} and {{max}} months."
+  },
+  "monthlyIncome": {
+    "required": "Enter monthly income.",
+    "invalid": "Enter a valid monthly income.",
+    "negative": "Monthly income cannot be negative.",
+    "positive": "Monthly income must be greater than zero.",
+    "min": "Minimum monthly income of {{min}} required."
+  },
+  "monthlyExpenses": {
+    "required": "Enter monthly expenses.",
+    "invalid": "Enter a valid monthly expenses.",
+    "negative": "Monthly expenses cannot be negative.",
+    "positive": "Monthly expenses must be greater than zero.",
+    "min": "Monthly expenses must be at least {{min}}."
+  },
+  "existingDebt": {
+    "invalid": "Enter a valid existing monthly debt.",
+    "negative": "Existing monthly debt cannot be negative.",
+    "positive": "Existing monthly debt must be greater than zero.",
+    "min": "Existing monthly debt must be at least {{min}}."
+  },
+  "currency": {
+    "invalid": "Enter a valid rand amount, for example 150000 or 150000,50.",
+    "min": "Amount must be at least {{min}}.",
+    "max": "Amount must not exceed {{max}}."
+  }
+}

@@ -1,4 +1,5 @@
 import type { LabelHTMLAttributes, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,8 @@ export function FieldLabel({
   className,
   ...rest
 }: FieldLabelProps) {
+  const { t } = useTranslation('common')
+
   return (
     <label className={cn(labelClasses, 'flex flex-wrap items-center gap-1', className)} {...rest}>
       <span>{children}</span>
@@ -35,10 +38,12 @@ export function FieldLabel({
           <span aria-hidden="true" className="text-danger-foreground">
             *
           </span>
-          <span className="sr-only">(required)</span>
+          <span className="sr-only">{t('states.required')}</span>
         </>
       ) : null}
-      {!required && optional ? <span className="text-ink-muted">(optional)</span> : null}
+      {!required && optional ? (
+        <span className="text-ink-muted">{t('states.optional')}</span>
+      ) : null}
       {trailing}
     </label>
   )

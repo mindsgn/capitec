@@ -1,0 +1,14 @@
+{
+  "actions": {
+    "updateEstimate": "Update estimate",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "dismiss": "Dismiss"
+  },
+  "states": {
+    "loading": "Loading",
+    "required": "(required)",
+    "optional": "(optional)"
+  }
+}

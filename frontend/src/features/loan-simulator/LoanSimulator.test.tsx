@@ -116,4 +116,23 @@ describe('LoanSimulator integration', () => {
 
     expect(screen.getByLabelText('Loan amount')).toHaveValue('100000')
   })
+
+  it('renders translated copy: interpolated bounds, plural options and rich text', () => {
+    render(<LoanSimulator />)
+
+    // Bounds are formatted as en-ZA rand at render, never baked into resources.
+    expect(
+      screen.getByText('Choose an amount between R 5 000 and R 300 000.'),
+    ).toBeInTheDocument()
+
+    // Term options come from the pluralised `loan:fields.term.months` key.
+    const term = screen.getByLabelText('Repayment term')
+    expect(within(term).getByRole('option', { name: '6 months' })).toBeInTheDocument()
+    expect(within(term).getByRole('option', { name: '60 months' })).toBeInTheDocument()
+
+    // `<Trans>` keeps the <strong> markup in the resource while interpolating the rate.
+    expect(screen.getByText('12.5% per year')).toBeInTheDocument()
+
+    expect(document.title).toBe('Loan eligibility simulator')
+  })
 })

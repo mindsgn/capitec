@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { ChangeEvent, InputHTMLAttributes } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { formatZAR, parseCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
@@ -27,8 +28,6 @@ export interface CurrencyInputProps
   optional?: boolean
 }
 
-const DEFAULT_INVALID_MESSAGE = 'Enter a valid rand amount, for example 150000 or 150000,50.'
-
 /**
  * Controlled South African rand input.
  *
@@ -55,6 +54,7 @@ export function CurrencyInput({
   className,
   ...rest
 }: CurrencyInputProps) {
+  const { t } = useTranslation('validation')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const parsed = parseCurrency(value)
@@ -63,14 +63,13 @@ export function CurrencyInput({
   let rangeError: string | undefined
   if (parsed.kind === 'valid') {
     if (min !== undefined && parsed.value < min) {
-      rangeError = `Amount must be at least ${formatZAR(min)}.`
+      rangeError = t('currency.min', { min: formatZAR(min) })
     } else if (max !== undefined && parsed.value > max) {
-      rangeError = `Amount must not exceed ${formatZAR(max)}.`
+      rangeError = t('currency.max', { max: formatZAR(max) })
     }
   }
 
-  const internalError =
-    error ?? (isUnparseable ? DEFAULT_INVALID_MESSAGE : rangeError)
+  const internalError = error ?? (isUnparseable ? t('currency.invalid') : rangeError)
   const hasError = Boolean(internalError)
 
   const ids = useFieldIds({ id, hasHint: Boolean(hint), hasError })

@@ -1,0 +1,5 @@
+{
+  "label": "Monthly income",
+  "hint": "Your income before deductions, each month.",
+  "placeholder": "25000"
+}

@@ -1,5 +1,6 @@
 import { LoaderCircle } from 'lucide-react'
 import type { ComponentPropsWithRef, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -11,7 +12,7 @@ export interface ButtonProps extends Omit<ComponentPropsWithRef<'button'>, 'chil
   type?: 'button' | 'submit' | 'reset'
   /** Swaps the label for a spinner and blocks duplicate activation. */
   loading?: boolean
-  /** Text announced to assistive technology while loading. */
+  /** Text announced to assistive technology while loading. Defaults to the translated `common:states.loading`. */
   loadingLabel?: string
   variant?: ButtonVariant
 }
@@ -34,14 +35,16 @@ const baseClasses =
 export function Button({
   variant = 'primary',
   loading = false,
-  loadingLabel = 'Loading',
+  loadingLabel,
   disabled,
   className,
   children,
   type = 'button',
   ...rest
 }: ButtonProps) {
+  const { t } = useTranslation('common')
   const isDisabled = disabled || loading
+  const resolvedLoadingLabel = loadingLabel ?? t('states.loading')
 
   return (
     <button
@@ -61,7 +64,7 @@ export function Button({
         <>
           <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
           <span>{children}</span>
-          <span className="sr-only">, {loadingLabel}</span>
+          <span className="sr-only">, {resolvedLoadingLabel}</span>
         </>
       ) : (
         children

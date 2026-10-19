@@ -1,6 +1,7 @@
 import { CircleHelp } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 
 import { ConfirmationDialog } from '@/components/accessibility/ConfirmationDialog'
 import { FormErrorSummary } from '@/components/accessibility/FormErrorSummary'
@@ -20,20 +21,16 @@ import { SecondaryButton } from '@/components/ui/SecondaryButton'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { formatZAR, toCurrencyValue } from '@/lib/currency'
 import type { LoanSimulatorFormValues } from '@/lib/validation'
+import { LOAN_SIMULATOR_LIMITS } from '@/lib/validation'
+import { translateFormError } from '@/i18n/formErrors'
 
 import { ILLUSTRATIVE_INTEREST_RATE, useLoanSimulatorStore } from './loanSimulatorStore'
 
-const TERM_OPTIONS: readonly SelectOption[] = [
-  { value: '6', label: '6 months' },
-  { value: '12', label: '12 months' },
-  { value: '24', label: '24 months' },
-  { value: '36', label: '36 months' },
-  { value: '48', label: '48 months' },
-  { value: '60', label: '60 months' },
-]
+const TERM_VALUES = [6, 12, 24, 36, 48, 60] as const
 
-const SLIDER_MIN = 5_000
-const SLIDER_MAX = 300_000
+// Derived from the schema limits so the slider, the hint and validation never drift.
+const SLIDER_MIN = LOAN_SIMULATOR_LIMITS.amount.min
+const SLIDER_MAX = LOAN_SIMULATOR_LIMITS.amount.max
 const SLIDER_STEP = 1_000
 
 const ERROR_SUMMARY_ID = 'loan-simulator-errors'
@@ -47,18 +44,49 @@ const ERROR_SUMMARY_ID = 'loan-simulator-errors'
  * with presentation and accessibility.
  */
 export function LoanSimulator() {
+  const { t, i18n } = useTranslation([
+    'navigation',
+    'loan',
+    'income',
+    'expenses',
+    'results',
+    'common',
+  ])
+  const { t: tValidation } = useTranslation('validation')
+
   const values = useLoanSimulatorStore((state) => state.values)
   const errors = useLoanSimulatorStore((state) => state.errors)
   const estimate = useLoanSimulatorStore((state) => state.estimate)
-  const announcement = useLoanSimulatorStore((state) => state.announcement)
   const setValue = useLoanSimulatorStore((state) => state.setValue)
   const submit = useLoanSimulatorStore((state) => state.submit)
   const reset = useLoanSimulatorStore((state) => state.reset)
 
   const [isResetOpen, setIsResetOpen] = useState(false)
 
-  const errorFor = (fieldId: keyof LoanSimulatorFormValues) =>
-    errors.find((error) => error.fieldId === fieldId)?.message
+  useEffect(() => {
+    const title = t('navigation:appName')
+    document.title = title
+  }, [t, i18n.language])
+
+  const errorFor = (fieldId: keyof LoanSimulatorFormValues) => {
+    const error = errors.find((e) => e.fieldId === fieldId)
+    if (!error) return undefined
+    return translateFormError(error, tValidation)
+  }
+
+  const announcement = useMemo(() => {
+    if (!estimate) return ''
+    return t('results:announcement', {
+      instalment: formatZAR(estimate.monthlyRepayment, { cents: false }),
+      term: Number(values.loanTerm),
+      total: formatZAR(estimate.totalRepayment, { cents: false }),
+    })
+  }, [estimate, values.loanTerm, t])
+
+  const termOptions: readonly SelectOption[] = useMemo(
+    () => TERM_VALUES.map((value) => ({ value: String(value), label: t('loan:fields.term.months', { count: value }) })),
+    [t],
+  )
 
   const sliderValue = toCurrencyValue(values.loanAmount) ?? SLIDER_MIN
 
@@ -78,11 +106,8 @@ export function LoanSimulator() {
 
       <header className="border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Loan eligibility simulator</h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-            Estimate a proposed repayment from your income, expenses and the amount you would like
-            to borrow. This is a demonstration page for the shared UI components.
-          </p>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">{t('navigation:appName')}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink-muted">{t('navigation:pageDescription')}</p>
         </div>
       </header>
 
@@ -91,15 +116,15 @@ export function LoanSimulator() {
         tabIndex={-1}
         className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6"
       >
-        <InfoBanner heading="Illustrative estimate only">
-          Figures are estimates for guidance. They are not a loan approval or a credit decision.
+        <InfoBanner heading={t('results:disclaimer.heading')}>
+          {t('results:disclaimer.body')}
         </InfoBanner>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <Card
             as="section"
-            title="Your details"
-            description="Amounts are in South African rand (ZAR)."
+            title={t('loan:form.title')}
+            description={t('loan:form.description')}
           >
             <form noValidate onSubmit={handleSubmit} aria-describedby={errors.length > 0 ? ERROR_SUMMARY_ID : undefined}>
               <FormErrorSummary id={ERROR_SUMMARY_ID} errors={errors} autoFocus className="mb-5" />
@@ -107,82 +132,85 @@ export function LoanSimulator() {
               <div className="flex flex-col gap-5">
                 <CurrencyInput
                   id="loanAmount"
-                  label="Loan amount"
+                  label={t('loan:fields.amount.label')}
                   value={values.loanAmount}
                   onChange={(value) => setValue('loanAmount', value)}
                   error={errorFor('loanAmount')}
-                  hint="Choose an amount between R5 000 and R300 000."
+                  hint={t('loan:fields.amount.hint', {
+                    min: formatZAR(LOAN_SIMULATOR_LIMITS.amount.min, { cents: false }),
+                    max: formatZAR(LOAN_SIMULATOR_LIMITS.amount.max, { cents: false }),
+                  })}
                   inputMode="decimal"
-                  placeholder="150000"
+                  placeholder={t('loan:fields.amount.placeholder')}
                 />
 
                 <SliderField
                   id="loanAmountSlider"
-                  label="Adjust the loan amount"
+                  label={t('loan:fields.amount.sliderLabel')}
                   value={sliderValue}
                   onChange={(value) => setValue('loanAmount', String(value))}
                   min={SLIDER_MIN}
                   max={SLIDER_MAX}
                   step={SLIDER_STEP}
                   format="currency"
-                  hint="Drag to set the amount. The field above updates to match."
+                  hint={t('loan:fields.amount.sliderHint')}
                 />
 
                 <SelectField
                   id="loanTerm"
-                  label="Repayment term"
+                  label={t('loan:fields.term.label')}
                   value={values.loanTerm}
                   onChange={(event) => setValue('loanTerm', event.target.value)}
-                  options={TERM_OPTIONS}
+                  options={termOptions}
                   error={errorFor('loanTerm')}
-                  hint="The number of months over which you would repay the loan."
+                  hint={t('loan:fields.term.hint')}
                 />
 
                 <CurrencyInput
                   id="monthlyIncome"
-                  label="Monthly income"
+                  label={t('income:label')}
                   value={values.monthlyIncome}
                   onChange={(value) => setValue('monthlyIncome', value)}
                   error={errorFor('monthlyIncome')}
-                  hint="Your income before deductions, each month."
+                  hint={t('income:hint')}
                   inputMode="decimal"
-                  placeholder="25000"
+                  placeholder={t('income:placeholder')}
                 />
 
                 <CurrencyInput
                   id="monthlyExpenses"
-                  label="Monthly expenses"
+                  label={t('expenses:fields.expenses.label')}
                   value={values.monthlyExpenses}
                   onChange={(value) => setValue('monthlyExpenses', value)}
                   error={errorFor('monthlyExpenses')}
-                  hint="Your usual living costs each month."
+                  hint={t('expenses:fields.expenses.hint')}
                   inputMode="decimal"
-                  placeholder="15000"
+                  placeholder={t('expenses:fields.expenses.placeholder')}
                 />
 
                 <CurrencyInput
                   id="existingDebt"
-                  label="Existing monthly debt"
+                  label={t('expenses:fields.debt.label')}
                   value={values.existingDebt}
                   onChange={(value) => setValue('existingDebt', value)}
                   error={errorFor('existingDebt')}
                   optional
-                  hint="Repayments on other loans or credit, if any."
+                  hint={t('expenses:fields.debt.hint')}
                   inputMode="decimal"
-                  placeholder="0"
+                  placeholder={t('expenses:fields.debt.placeholder')}
                 />
 
                 <p className="flex items-center gap-1.5 text-sm text-ink-muted">
                   <span>
-                    Uses a fixed illustrative interest rate of{' '}
-                    <strong className="font-semibold text-ink">
-                      {ILLUSTRATIVE_INTEREST_RATE}% per year
-                    </strong>
-                    .
+                    <Trans
+                      i18nKey="loan:interestRate.note"
+                      values={{ rate: ILLUSTRATIVE_INTEREST_RATE }}
+                      components={{ strong: <strong className="font-semibold text-ink" /> }}
+                    />
                   </span>
                   <Tooltip
-                    label="What the interest rate means"
-                    content="The interest rate is the yearly cost of borrowing. The estimate keeps it fixed for the whole term."
+                    label={t('loan:interestRate.tooltipLabel')}
+                    content={t('loan:interestRate.tooltipContent')}
                   >
                     <CircleHelp aria-hidden="true" className="size-4" />
                   </Tooltip>
@@ -190,37 +218,37 @@ export function LoanSimulator() {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <PrimaryButton type="submit">Update estimate</PrimaryButton>
-                <SecondaryButton onClick={() => setIsResetOpen(true)}>Reset</SecondaryButton>
+                <PrimaryButton type="submit">{t('common:actions.updateEstimate')}</PrimaryButton>
+                <SecondaryButton onClick={() => setIsResetOpen(true)}>{t('common:actions.reset')}</SecondaryButton>
               </div>
             </form>
           </Card>
 
           <div className="flex flex-col gap-6">
-            <Card as="section" title="Your estimate">
+            <Card as="section" title={t('results:title')}>
               {estimate ? (
                 <div className="flex flex-col gap-4">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg bg-brand-soft p-3">
-                      <dt className="text-sm text-ink-muted">Monthly instalment</dt>
+                      <dt className="text-sm text-ink-muted">{t('results:monthlyInstalment')}</dt>
                       <dd className="text-xl font-bold text-ink tabular-nums">
                         {formatZAR(estimate.monthlyRepayment)}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-brand-soft p-3">
-                      <dt className="text-sm text-ink-muted">Total borrowing cost</dt>
+                      <dt className="text-sm text-ink-muted">{t('results:borrowingCost')}</dt>
                       <dd className="text-xl font-bold text-ink tabular-nums">
                         {formatZAR(estimate.totalBorrowingCost)}
                       </dd>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <dt className="text-sm text-ink-muted">Total repayment</dt>
+                      <dt className="text-sm text-ink-muted">{t('results:totalRepayment')}</dt>
                       <dd className="text-lg font-semibold text-ink tabular-nums">
                         {formatZAR(estimate.totalRepayment)}
                       </dd>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <dt className="text-sm text-ink-muted">Income left each month</dt>
+                      <dt className="text-sm text-ink-muted">{t('results:remainingIncome')}</dt>
                       <dd className="text-lg font-semibold text-ink tabular-nums">
                         {formatZAR(estimate.remainingIncome)}
                       </dd>
@@ -228,22 +256,21 @@ export function LoanSimulator() {
                   </dl>
 
                   {estimate.remainingIncome < 0 ? (
-                    <Alert variant="warning" heading="This repayment may not be affordable">
-                      After your expenses, existing debt and this instalment, the estimate leaves you
-                      short by {formatZAR(Math.abs(estimate.remainingIncome))} a month. Consider a
-                      smaller amount or a longer term.
+                    <Alert variant="warning" heading={t('results:unaffordable.heading')}>
+                      {t('results:unaffordable.body', {
+                        shortfall: formatZAR(Math.abs(estimate.remainingIncome)),
+                      })}
                     </Alert>
                   ) : (
-                    <Alert variant="success" heading="This repayment looks manageable">
-                      Based on the figures you entered, you would have{' '}
-                      {formatZAR(estimate.remainingIncome)} left each month.
+                    <Alert variant="success" heading={t('results:affordable.heading')}>
+                      {t('results:affordable.body', { remaining: formatZAR(estimate.remainingIncome) })}
                     </Alert>
                   )}
                 </div>
               ) : (
                 <EmptyState
-                  title="No estimate yet"
-                  description="Fill in your details and choose “Update estimate” to see an illustrative monthly instalment."
+                  title={t('results:empty.title')}
+                  description={t('results:empty.description', { action: t('common:actions.updateEstimate') })}
                 />
               )}
             </Card>
@@ -257,10 +284,10 @@ export function LoanSimulator() {
 
       <ConfirmationDialog
         open={isResetOpen}
-        title="Reset the form?"
-        description="This clears every value and removes the current estimate. It cannot be undone."
-        confirmLabel="Reset form"
-        cancelLabel="Keep my details"
+        title={t('loan:resetDialog.title')}
+        description={t('loan:resetDialog.description')}
+        confirmLabel={t('loan:resetDialog.confirm')}
+        cancelLabel={t('loan:resetDialog.cancel')}
         tone="danger"
         onConfirm={handleConfirmReset}
         onCancel={() => setIsResetOpen(false)}

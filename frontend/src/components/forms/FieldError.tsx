@@ -1,5 +1,6 @@
 import { CircleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -23,11 +24,13 @@ export interface FieldErrorProps {
  * message is not communicated by colour alone.
  */
 export function FieldError({ id, children, announce = false, className }: FieldErrorProps) {
+  const { t } = useTranslation('accessibility')
+
   return (
     <p id={id} className={cn(errorClasses, className)} role={announce ? 'alert' : undefined}>
       <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <span>
-        <span className="sr-only">Error: </span>
+        <span className="sr-only">{t('errorPrefix')} </span>
         {children}
       </span>
     </p>

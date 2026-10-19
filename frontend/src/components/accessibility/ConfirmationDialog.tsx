@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -10,7 +11,9 @@ export interface ConfirmationDialogProps {
   open: boolean
   title: string
   description?: ReactNode
+  /** Confirm button label. Defaults to the translated `common:actions.confirm`. */
   confirmLabel?: string
+  /** Cancel button label. Defaults to the translated `common:actions.cancel`. */
   cancelLabel?: string
   /** Called only when the user confirms. The parent should then close the dialog. */
   onConfirm: () => void
@@ -35,13 +38,14 @@ export function ConfirmationDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   onConfirm,
   onCancel,
   tone = 'default',
   children,
 }: ConfirmationDialogProps) {
+  const { t } = useTranslation('common')
   const dialogRef = useRef<HTMLDialogElement>(null)
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
@@ -49,6 +53,8 @@ export function ConfirmationDialog({
 
   const titleId = `${ids}-title`
   const descriptionId = `${ids}-description`
+  const resolvedConfirmLabel = confirmLabel ?? t('actions.confirm')
+  const resolvedCancelLabel = cancelLabel ?? t('actions.cancel')
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -94,13 +100,13 @@ export function ConfirmationDialog({
       {children ? <div className="mt-4">{children}</div> : null}
       <div className="mt-6 flex flex-wrap justify-end gap-3">
         <SecondaryButton ref={cancelButtonRef} onClick={onCancel}>
-          {cancelLabel}
+          {resolvedCancelLabel}
         </SecondaryButton>
         <PrimaryButton
           onClick={onConfirm}
           className={tone === 'danger' ? 'bg-danger hover:bg-danger-foreground' : undefined}
         >
-          {confirmLabel}
+          {resolvedConfirmLabel}
         </PrimaryButton>
       </div>
     </dialog>

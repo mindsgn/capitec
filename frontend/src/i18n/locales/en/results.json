@@ -1,0 +1,24 @@
+{
+  "title": "Your estimate",
+  "monthlyInstalment": "Monthly instalment",
+  "borrowingCost": "Total borrowing cost",
+  "totalRepayment": "Total repayment",
+  "remainingIncome": "Income left each month",
+  "disclaimer": {
+    "heading": "Illustrative estimate only",
+    "body": "Figures are estimates for guidance. They are not a loan approval or a credit decision."
+  },
+  "unaffordable": {
+    "heading": "This repayment may not be affordable",
+    "body": "After your expenses, existing debt and this instalment, the estimate leaves you short by {{shortfall}} a month. Consider a smaller amount or a longer term."
+  },
+  "affordable": {
+    "heading": "This repayment looks manageable",
+    "body": "Based on the figures you entered, you would have {{remaining}} left each month."
+  },
+  "empty": {
+    "title": "No estimate yet",
+    "description": "Fill in your details and choose “{{action}}” to see an illustrative monthly instalment."
+  },
+  "announcement": "Estimated monthly instalment {{instalment}} for a {{term}} month term. Total repayment {{total}}."
+}

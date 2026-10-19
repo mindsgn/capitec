@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 
-import { formatZAR } from '@/lib/currency'
 import { calculateLoanEstimate } from '@/lib/loan'
 import type { LoanEstimate } from '@/lib/loan'
 import { validateLoanSimulator } from '@/lib/validation'
@@ -17,21 +16,10 @@ const EMPTY_VALUES: LoanSimulatorFormValues = {
   existingDebt: '',
 }
 
-/** Builds the concise summary announced by the polite live region. */
-function buildAnnouncement(estimate: LoanEstimate, termMonths: number): string {
-  return [
-    `Estimated monthly instalment ${formatZAR(estimate.monthlyRepayment, { cents: false })}`,
-    `for a ${termMonths} month term.`,
-    `Total repayment ${formatZAR(estimate.totalRepayment, { cents: false })}.`,
-  ].join(' ')
-}
-
 export interface LoanSimulatorStore {
   values: LoanSimulatorFormValues
   errors: FormError[]
   estimate: LoanEstimate | null
-  /** Concise message for the polite live region; empty until a valid submit. */
-  announcement: string
   setValue: (field: keyof LoanSimulatorFormValues, value: string) => void
   /** Validates and, when valid, calculates an estimate and announces it. */
   submit: () => void
@@ -48,7 +36,6 @@ export const useLoanSimulatorStore = create<LoanSimulatorStore>((set, get) => ({
   values: { ...EMPTY_VALUES },
   errors: [],
   estimate: null,
-  announcement: '',
 
   setValue: (field, value) =>
     set((state) => ({
@@ -59,9 +46,7 @@ export const useLoanSimulatorStore = create<LoanSimulatorStore>((set, get) => ({
     const result = validateLoanSimulator(get().values)
 
     if (!result.success) {
-      // Bumping the announcement to the same text would be a no-op in the DOM,
-      // so an invalid submit only clears errors/results.
-      set({ errors: result.errors, estimate: null, announcement: '' })
+      set({ errors: result.errors, estimate: null })
       return
     }
 
@@ -77,9 +62,8 @@ export const useLoanSimulatorStore = create<LoanSimulatorStore>((set, get) => ({
     set({
       errors: [],
       estimate,
-      announcement: buildAnnouncement(estimate, result.data.loanTerm),
     })
   },
 
-  reset: () => set({ values: { ...EMPTY_VALUES }, errors: [], estimate: null, announcement: '' }),
+  reset: () => set({ values: { ...EMPTY_VALUES }, errors: [], estimate: null }),
 }))

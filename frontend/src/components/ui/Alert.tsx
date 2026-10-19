@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,7 @@ export interface AlertProps {
   role?: 'alert' | 'status' | 'note'
   /** When provided, renders a clearly labelled dismiss button. */
   onDismiss?: () => void
+  /** Dismiss button label. Defaults to the translated `common:actions.dismiss`. */
   dismissLabel?: string
   className?: string
 }
@@ -41,9 +43,11 @@ export function Alert({
   children,
   role,
   onDismiss,
-  dismissLabel = 'Dismiss',
+  dismissLabel,
   className,
 }: AlertProps) {
+  const { t } = useTranslation('accessibility')
+  const { t: tCommon } = useTranslation('common')
   const style = noticeStyles[variant]
   const Icon = style.icon
   const ariaRole = role ?? defaultRoles[variant]
@@ -59,7 +63,7 @@ export function Alert({
     >
       <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
       <div className="flex-1">
-        <span className="sr-only">{style.srLabel} </span>
+        <span className="sr-only">{t(style.srLabelKey)} </span>
         {heading ? <p className="font-semibold">{heading}</p> : null}
         <div>{children}</div>
       </div>
@@ -70,7 +74,7 @@ export function Alert({
           className="-m-1 rounded p-1 text-current hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <X aria-hidden="true" className="size-4" />
-          <span className="sr-only">{dismissLabel}</span>
+          <span className="sr-only">{dismissLabel ?? tCommon('actions.dismiss')}</span>
         </button>
       ) : null}
     </div>

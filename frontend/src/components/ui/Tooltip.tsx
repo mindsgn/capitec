@@ -1,6 +1,7 @@
 import { CircleHelp } from 'lucide-react'
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
 
@@ -23,10 +24,11 @@ export interface TooltipProps {
  * Tooltips should supplement, never replace, essential information.
  */
 export function Tooltip({ content, label, children, className }: TooltipProps) {
+  const { t } = useTranslation('accessibility')
   const [open, setOpen] = useState(false)
   const tooltipId = useId()
 
-  const accessibleName = label ?? (typeof content === 'string' ? content : 'More information')
+  const accessibleName = label ?? (typeof content === 'string' ? content : t('tooltip.moreInfo'))
 
   return (
     <span className={cn('relative inline-flex', className)}>
