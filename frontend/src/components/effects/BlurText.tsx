@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 
 /** Word-by-word blur-in headline, modelled on React Bits "Blur Text". */
 export function BlurText({ text, className, delay = 0.06 }: { text: string; className?: string; delay?: number }) {
@@ -6,7 +7,7 @@ export function BlurText({ text, className, delay = 0.06 }: { text: string; clas
   return (
     <span className={className} aria-label={text}>
       {text.split(' ').map((word, i) => (
-        <motion.span
+        <m.span
           key={i}
           aria-hidden
           className="mr-[0.25em] inline-block"
@@ -15,7 +16,7 @@ export function BlurText({ text, className, delay = 0.06 }: { text: string; clas
           transition={{ delay: i * delay, duration: 0.5, ease: 'easeOut' }}
         >
           {word}
-        </motion.span>
+        </m.span>
       ))}
     </span>
   );

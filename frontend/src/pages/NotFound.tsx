@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Compass } from 'lucide-react';
 import { Seo } from '@/components/Seo';
-import { buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 
 export default function NotFound() {
   const { t } = useTranslation();

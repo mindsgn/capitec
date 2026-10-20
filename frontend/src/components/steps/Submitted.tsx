@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { toast } from 'sonner';
 import { CheckCircle2 } from 'lucide-react';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LOAN_MAP } from '@/lib/loans';
 import { useSim } from '@/state/SimulatorContext';
@@ -17,9 +19,9 @@ export function SubmittedView() {
   return (
     <Card className="mx-auto w-full max-w-2xl text-center">
       <CardHeader className="items-center">
-        <motion.span initial={reduce ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }}>
+        <m.span initial={reduce ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }}>
           <CheckCircle2 className="h-16 w-16 text-success" aria-hidden />
-        </motion.span>
+        </m.span>
         <CardTitle tabIndex={-1} data-step-title>{t('done.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

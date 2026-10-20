@@ -5,7 +5,7 @@ import { NumberField } from '@/components/NumberField';
 import { StepShell } from '@/components/StepShell';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { LOAN_MAP, LOANS, type LoanIcon } from '@/lib/loans';
+import { LOAN_MAP, LOANS, type LoanConfig, type LoanIcon } from '@/lib/loans';
 import { simulateLoan } from '@/lib/calc';
 import { expensesSchema, incomeSchema, loanDetailsSchema, translateIssue, validate } from '@/lib/schemas';
 import { cn, formatZAR } from '@/lib/utils';
@@ -85,6 +85,70 @@ export function ExpensesStep({ flow }: { flow: Flow }) {
   );
 }
 
+function amountStep(maxAmount: number) {
+  return maxAmount > 1_000_000 ? 10_000 : maxAmount > 100_000 ? 1_000 : 100;
+}
+
+function AmountField({ cfg, value, error, onChange }: { cfg: LoanConfig; value: number | null; error?: string; onChange: (v: number | null) => void }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <NumberField
+        id="amount"
+        label={t('fields.amount')}
+        hint={t('fields.amountHint', { min: formatZAR(cfg.minAmount), max: formatZAR(cfg.maxAmount) })}
+        value={value}
+        onChange={onChange}
+        error={error}
+      />
+      <Slider
+        aria-label={t('fields.amount')}
+        min={cfg.minAmount}
+        max={cfg.maxAmount}
+        step={amountStep(cfg.maxAmount)}
+        value={[Math.min(cfg.maxAmount, Math.max(cfg.minAmount, value ?? cfg.minAmount))]}
+        onValueChange={([v]) => onChange(v)}
+      />
+    </>
+  );
+}
+
+function TermField({ cfg, value, onChange }: { cfg: LoanConfig; value: number | null; onChange: (v: number | null) => void }) {
+  const { t } = useTranslation();
+  const years = value ? Math.floor(value / 12) : 0;
+  const rem = value ? value % 12 : 0;
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-baseline justify-between">
+        <Label>{t('fields.term')}</Label>
+        <span className="font-bold" data-testid="term-label">{t('fields.termValue', { months: value ?? cfg.minTerm })}{value && value >= 12 ? ` (${years}y${rem ? ` ${rem}m` : ''})` : ''}</span>
+      </div>
+      <Slider
+        aria-label={t('fields.term')}
+        min={cfg.minTerm}
+        max={cfg.maxTerm}
+        step={1}
+        value={[value ?? cfg.minTerm]}
+        onValueChange={([v]) => onChange(v)}
+      />
+      <p className="text-sm text-muted-foreground">{t('fields.termHint', { min: cfg.minTerm, max: cfg.maxTerm })}</p>
+    </div>
+  );
+}
+
+function InstalmentPreview({ rate, quote }: { rate: number; quote: ReturnType<typeof simulateLoan> | null }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg bg-secondary p-4">
+      <p className="text-sm text-muted-foreground">{t('steps.loanDetails.preview', { rate })}</p>
+      <p className="text-3xl font-extrabold text-primary" aria-live="polite">
+        {quote ? <CountUp value={quote.instalment} format={(n) => formatZAR(n)} /> : '–'}
+        <span className="ml-1 text-base font-semibold text-muted-foreground">{t('common.perMonth')}</span>
+      </p>
+    </div>
+  );
+}
+
 export function LoanDetailsStep({ flow }: { flow: Flow }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
@@ -93,51 +157,15 @@ export function LoanDetailsStep({ flow }: { flow: Flow }) {
   const { amount, months } = state.loan;
   const errors = validate(loanDetailsSchema(cfg), { amount, months });
   const valid = Object.keys(errors).length === 0;
-  const stepAmount = cfg.maxAmount > 1_000_000 ? 10_000 : cfg.maxAmount > 100_000 ? 1_000 : 100;
   const quote = valid ? simulateLoan({ amount: amount!, months: months!, ratePct: cfg.rate }) : null;
-  const years = months ? Math.floor(months / 12) : 0;
-  const rem = months ? months % 12 : 0;
+  const setAmount = (v: number | null) => update((s) => ({ ...s, loan: { ...s.loan, amount: v } }));
+  const setMonths = (v: number | null) => update((s) => ({ ...s, loan: { ...s.loan, months: v } }));
 
   return (
     <StepShell title={t('steps.loanDetails.title', { loan: t(`loans.${cfg.id}.name`) })} description={t('steps.loanDetails.desc')} onBack={flow.back} onNext={flow.next} nextDisabled={!valid}>
-      <NumberField
-        id="amount"
-        label={t('fields.amount')}
-        hint={t('fields.amountHint', { min: formatZAR(cfg.minAmount), max: formatZAR(cfg.maxAmount) })}
-        value={amount}
-        onChange={(v) => update((s) => ({ ...s, loan: { ...s.loan, amount: v } }))}
-        error={errors.amount ? translateIssue(t, errors.amount) : undefined}
-      />
-      <Slider
-        aria-label={t('fields.amount')}
-        min={cfg.minAmount}
-        max={cfg.maxAmount}
-        step={stepAmount}
-        value={[Math.min(cfg.maxAmount, Math.max(cfg.minAmount, amount ?? cfg.minAmount))]}
-        onValueChange={([v]) => update((s) => ({ ...s, loan: { ...s.loan, amount: v } }))}
-      />
-      <div className="space-y-3 pt-2">
-        <div className="flex items-baseline justify-between">
-          <Label>{t('fields.term')}</Label>
-          <span className="font-bold" data-testid="term-label">{t('fields.termValue', { months: months ?? cfg.minTerm })}{months && months >= 12 ? ` (${years}y${rem ? ` ${rem}m` : ''})` : ''}</span>
-        </div>
-        <Slider
-          aria-label={t('fields.term')}
-          min={cfg.minTerm}
-          max={cfg.maxTerm}
-          step={1}
-          value={[months ?? cfg.minTerm]}
-          onValueChange={([v]) => update((s) => ({ ...s, loan: { ...s.loan, months: v } }))}
-        />
-        <p className="text-sm text-muted-foreground">{t('fields.termHint', { min: cfg.minTerm, max: cfg.maxTerm })}</p>
-      </div>
-      <div className="rounded-lg bg-secondary p-4">
-        <p className="text-sm text-muted-foreground">{t('steps.loanDetails.preview', { rate: cfg.rate })}</p>
-        <p className="text-3xl font-extrabold text-primary" aria-live="polite">
-          {quote ? <CountUp value={quote.instalment} format={(n) => formatZAR(n)} /> : '–'}
-          <span className="ml-1 text-base font-semibold text-muted-foreground">{t('common.perMonth')}</span>
-        </p>
-      </div>
+      <AmountField cfg={cfg} value={amount} error={errors.amount ? translateIssue(t, errors.amount) : undefined} onChange={setAmount} />
+      <TermField cfg={cfg} value={months} onChange={setMonths} />
+      <InstalmentPreview rate={cfg.rate} quote={quote} />
     </StepShell>
   );
 }

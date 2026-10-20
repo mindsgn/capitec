@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { ArrowRight, ClipboardCheck, Calculator, ShieldCheck } from 'lucide-react';
 import { BlurText } from '@/components/effects/BlurText';
 import { ShimmerButton } from '@/components/effects/ShimmerButton';
-import { Seo, SITE_URL } from '@/components/Seo';
+import { Seo } from '@/components/Seo';
+import { SITE_URL } from '@/lib/site';
 import { useSim } from '@/state/SimulatorContext';
 
 const FAQ_KEYS = ['one', 'two', 'three', 'four'] as const;
@@ -33,12 +35,12 @@ export default function Landing() {
               <ShimmerButton to="/simulator">{hasProgress ? t('landing.resume') : t('landing.cta')}<ArrowRight className="h-5 w-5" aria-hidden /></ShimmerButton>
             </div>
           </div>
-          <motion.div initial={reduce ? false : { opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="rounded-2xl bg-white p-6 text-foreground shadow-2xl">
+          <m.div initial={reduce ? false : { opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="rounded-2xl bg-white p-6 text-foreground shadow-2xl">
             <p className="text-sm text-muted-foreground">{t('landing.card.label')}</p>
             <p className="text-4xl font-extrabold text-primary">R 1 112,40<span className="text-base font-semibold text-muted-foreground"> {t('common.perMonth')}</span></p>
             <div className="mt-4 h-3 overflow-hidden rounded-full bg-muted"><div className="h-full w-[38%] rounded-full bg-success" /></div>
             <p className="mt-2 text-sm text-muted-foreground">{t('landing.card.caption')}</p>
-          </motion.div>
+          </m.div>
         </div>
       </section>
 

@@ -65,6 +65,27 @@ test.describe('affordability flow', () => {
   });
 });
 
+test.describe('loan details step', () => {
+  test('shows the term breakdown and updates it live from the slider', async ({ page }) => {
+    await pickPersonalLoan(page);
+    await page.getByTestId('grossIncome').fill('30000');
+    await page.getByTestId('netIncome').fill('24000');
+    await cont(page).click();
+    for (const id of ['housing', 'transport', 'living', 'other', 'existingDebt']) await page.getByTestId(id).fill('500');
+    await cont(page).click();
+
+    // personal loan defaults: R20 000 over 36 months
+    await expect(page.getByTestId('term-label')).toHaveText('36 months (3y)');
+    await expect(page.getByText(/estimated instalment at an indicative 24% a year/i)).toBeVisible();
+
+    // nudge the term forward one month with the keyboard and watch the breakdown follow
+    const termSlider = page.getByRole('slider', { name: 'Repayment term' });
+    await termSlider.focus();
+    await termSlider.press('ArrowRight');
+    await expect(page.getByTestId('term-label')).toHaveText('37 months (3y 1m)');
+  });
+});
+
 test.describe('persistence', () => {
   test('keeps the step and entered data after a refresh', async ({ page }) => {
     await pickPersonalLoan(page);

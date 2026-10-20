@@ -1,6 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-
-export const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined) ?? 'https://loan-simulator.example.com';
+import { SITE_URL } from '@/lib/site';
 
 interface Props { title: string; description: string; path?: string; noindex?: boolean; jsonLd?: object | object[] }
 

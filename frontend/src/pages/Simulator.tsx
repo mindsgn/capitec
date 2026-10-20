@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
+import { AnimatePresence, useReducedMotion, type Variants } from 'motion/react';
+import * as m from 'motion/react-m';
 import { toast } from 'sonner';
 import { RotateCcw } from 'lucide-react';
 import { Seo } from '@/components/Seo';
@@ -90,6 +91,7 @@ export default function Simulator() {
   }
 
   const submitted = state.phase === 'submitted';
+
   const phases = [
     { id: 'affordability', label: t('phase.affordability') },
     { id: 'eligibility', label: t('phase.eligibility') },
@@ -120,9 +122,9 @@ export default function Simulator() {
           </div>
         )}
         <AnimatePresence mode="wait" initial={false} custom={dir}>
-          <motion.div key={`${state.phase}:${stepId}`} custom={dir} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: 'easeOut' }}>
+          <m.div key={`${state.phase}:${stepId}`} custom={dir} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: 'easeOut' }}>
             {submitted ? <SubmittedView /> : renderStep()}
-          </motion.div>
+          </m.div>
         </AnimatePresence>
       </div>
     </div>
