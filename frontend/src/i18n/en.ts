@@ -1,5 +1,5 @@
 const en = {
-  brand: { name: 'Loan Simulator' },
+  brand: { name: 'Capitec' },
   nav: { label: 'Main', home: 'Home', start: 'Start simulation', resume: 'Resume', skip: 'Skip to content' },
   footer: {
     disclaimer: 'Results are indicative only and are not an offer of credit. Rates, fees and limits are simplified, and approval depends on a full credit and affordability assessment.',

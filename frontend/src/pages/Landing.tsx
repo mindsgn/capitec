@@ -1,14 +1,11 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, Car, ClipboardCheck, Calculator, GraduationCap, Hammer, HeartPulse, Home, Layers, ShieldCheck, User } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, Calculator, ShieldCheck } from 'lucide-react';
 import { BlurText } from '@/components/effects/BlurText';
 import { ShimmerButton } from '@/components/effects/ShimmerButton';
 import { Seo, SITE_URL } from '@/components/Seo';
-import { LOANS, type LoanIcon } from '@/lib/loans';
 import { useSim } from '@/state/SimulatorContext';
 
-const ICONS: Record<LoanIcon, typeof User> = { user: User, car: Car, home: Home, graduation: GraduationCap, hammer: Hammer, heart: HeartPulse, layers: Layers };
 const FAQ_KEYS = ['one', 'two', 'three', 'four'] as const;
 
 export default function Landing() {
@@ -34,7 +31,6 @@ export default function Landing() {
             <p className="max-w-xl text-lg text-white/85">{t('landing.subtitle')}</p>
             <div className="flex flex-wrap items-center gap-3">
               <ShimmerButton to="/simulator">{hasProgress ? t('landing.resume') : t('landing.cta')}<ArrowRight className="h-5 w-5" aria-hidden /></ShimmerButton>
-              <a href="#loans" className="rounded-full px-5 py-3 font-semibold text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">{t('landing.browse')}</a>
             </div>
           </div>
           <motion.div initial={reduce ? false : { opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="rounded-2xl bg-white p-6 text-foreground shadow-2xl">
@@ -62,39 +58,6 @@ export default function Landing() {
         </ol>
       </section>
 
-      <section id="loans" className="bg-secondary py-16" aria-labelledby="loans-h">
-        <div className="container">
-          <h2 id="loans-h" className="text-3xl font-extrabold">{t('landing.loans.title')}</h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">{t('landing.loans.subtitle')}</p>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {LOANS.map((l) => {
-              const Icon = ICONS[l.icon];
-              return (
-                <li key={l.id}>
-                  <Link to={`/simulator?type=${l.id}`} className="group flex h-full flex-col gap-3 rounded-lg border bg-card p-5 transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <span className="grid h-11 w-11 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-5 w-5" aria-hidden /></span>
-                    <span className="text-lg font-bold">{t(`loans.${l.id}.name`)}</span>
-                    <span className="flex-1 text-sm text-muted-foreground">{t(`loans.${l.id}.blurb`)}</span>
-                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">{t('landing.loans.try')}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden /></span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
-
-      <section className="container py-16" aria-labelledby="faq">
-        <h2 id="faq" className="text-3xl font-extrabold">{t('landing.faq')}</h2>
-        <div className="mt-6 max-w-3xl divide-y rounded-lg border">
-          {FAQ_KEYS.map((k) => (
-            <details key={k} className="group p-5">
-              <summary className="cursor-pointer list-none font-semibold marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t(`faq.${k}.q`)}</summary>
-              <p className="mt-3 text-muted-foreground">{t(`faq.${k}.a`)}</p>
-            </details>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

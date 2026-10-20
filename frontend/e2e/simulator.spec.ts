@@ -5,7 +5,7 @@ test.describe('landing page and SEO', () => {
   test('has title, description, canonical, JSON-LD and a working call to action', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Loan Simulator/);
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /.{40,}/);
+    await expect(page.locator('meta[name="description"]').first()).toHaveAttribute('content', /.{40,}/); // index.html ships a static description and Helmet adds its own, so scope to the first
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/$/);
     await expect(page.locator('script[type="application/ld+json"]').first()).toBeAttached();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -13,10 +13,13 @@ test.describe('landing page and SEO', () => {
     await expect(page).toHaveURL(/\/simulator/);
   });
 
-  test('a loan card deep links into the simulator and skips loan selection', async ({ page }) => {
+  test('header shows the Capitec logo and brand name', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: /simulate this loan/i }).first().click();
-    await expect(page.getByTestId('grossIncome')).toBeVisible();
+    const logo = page.getByTestId('header-logo');
+    await expect(logo).toBeVisible();
+    await expect(logo).toHaveAttribute('src', '/logo.png');
+    expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0); // the asset resolves, no 404
+    await expect(page.locator('header').getByRole('link', { name: 'Capitec' })).toHaveAttribute('href', '/');
   });
 
   test('unknown routes show a not-found state', async ({ page }) => {
@@ -105,10 +108,16 @@ test.describe('eligibility flow', () => {
     await page.getByTestId('age').fill('30');
     await page.getByTestId('salaryIntoCapitec-no').click();
     for (const box of await page.getByRole('checkbox').all()) await box.click();
+    // wait for each document step to render before uploading, otherwise the input
+    // of the previous step is still mounted and receives the file
     await cont(page).click();
+    await expect(page.getByRole('heading', { name: /south african id/i })).toBeVisible();
     await page.getByTestId('file-input').setInputFiles(pdf);
+    await expect(page.getByTestId('uploaded-file')).toBeVisible();
     await cont(page).click();
+    await expect(page.getByRole('heading', { name: /latest salary slip/i })).toBeVisible();
     await page.getByTestId('file-input').setInputFiles(pdf);
+    await expect(page.getByTestId('uploaded-file')).toBeVisible();
     await cont(page).click();
     await expect(page.getByRole('heading', { name: /bank statement with three salary deposits/i })).toBeVisible();
   });

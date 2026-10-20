@@ -12,12 +12,10 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-primary">
-          <span aria-hidden className="relative inline-block h-7 w-7 rounded-lg bg-primary"><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" /></span>
+          <img src="/logo.png" alt="" data-testid="header-logo" className="h-7 w-auto object-contain" />
           {t('brand.name')}
         </Link>
         <nav aria-label={t('nav.label')} className="flex items-center gap-1">
-          <NavLink to="/" end className={link}>{t('nav.home')}</NavLink>
-          <Link to="/simulator" className={buttonVariants({ size: 'sm' })}>{hasProgress ? t('nav.resume') : t('nav.start')}</Link>
         </nav>
       </div>
     </header>
