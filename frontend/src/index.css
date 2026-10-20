@@ -1,4 +1,37 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "./style/global.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Capitec-inspired tokens. Tune the brand in one place. */
+    --background: 0 0% 100%;
+    --foreground: 210 60% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 60% 12%;
+    --primary: 206 88% 38%;          /* brand blue  #0b6fb8 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 205 60% 96%;
+    --secondary-foreground: 210 88% 16%;
+    --accent: 358 77% 52%;           /* brand red   #e3262e */
+    --accent-foreground: 0 0% 100%;
+    --muted: 210 20% 93%;
+    --muted-foreground: 210 10% 42%;
+    --border: 210 25% 88%;
+    --input: 210 25% 80%;
+    --ring: 199 100% 45%;
+    --navy: 210 88% 16%;             /* #052a4d */
+    --sky: 199 100% 45%;             /* #00a1e4 */
+    --success: 152 60% 32%;
+    --warning: 32 95% 40%;
+    --radius: 1rem;
+  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  h1, h2, h3 { @apply tracking-tight; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
