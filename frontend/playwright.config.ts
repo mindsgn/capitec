@@ -1,79 +1,72 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * End-to-end configuration for the loan simulator.
+ *
+ * - `webServer` starts the same Vite dev server used for development
+ *   (`npm run dev`), reusing one that is already running outside CI so local
+ *   runs are fast and CI always gets a clean, strict-port server.
+ * - Chromium (desktop) is the baseline project; the Pixel 7 project adds a
+ *   representative mobile viewport and touch context on the same engine.
+ * - Firefox/WebKit are opt-in (`PW_CROSS_BROWSER=1`) — the binaries are large
+ *   and the app is engine-agnostic, so they are available on demand rather
+ *   than in every run.
+ * - Failures keep a screenshot, a video and (once a retry happens) a full
+ *   trace; the HTML report is written to `playwright-report/`.
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
+const PORT = 5173
+const BASE_URL = `http://localhost:${PORT}`
+
+/** Desktop baseline and mobile viewport; extra engines only when asked for. */
+const projects = [
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },
+  },
+  {
+    name: 'mobile',
+    use: { ...devices['Pixel 7'] },
+  },
+]
+
+if (process.env.PW_CROSS_BROWSER) {
+  projects.push(
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+  )
+}
+
 export default defineConfig({
-  testDir: './tests',
-  /* Run tests in files in parallel */
+  testDir: './tests/e2e',
+  /* Every test runs in its own context, so files may run fully in parallel. */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  /* Leftover `test.only` must not silently drop coverage in CI. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
+  /* CI retries absorb environment flakes; local runs fail fast and loud. */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
-  use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }], ['github']]
+    : [['list'], ['html', { open: 'never' }]],
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+  use: {
+    baseURL: BASE_URL,
+    /* Diagnostics for a failing test, without recording every passing run. */
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    actionTimeout: 15_000,
   },
 
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
+  projects,
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
+  outputDir: './test-results',
 
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
-});
+  webServer: {
+    command: `npm run dev -- --port ${PORT} --strictPort`,
+    url: BASE_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  },
+})

@@ -228,28 +228,35 @@ export function LoanSimulator() {
             <Card as="section" title={t('results:title')}>
               {estimate ? (
                 <div className="flex flex-col gap-4">
+                  {/*
+                    Each value carries a stable data-testid: `<dt>/<dd>` pairs
+                    expose no accessible name, so e2e tests cannot target a
+                    value through roles without falling back to DOM structure.
+                    Labels use `text-ink` because `text-ink-muted` on the
+                    brand-soft tiles fell below the WCAG AA contrast ratio.
+                  */}
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg bg-brand-soft p-3">
-                      <dt className="text-sm text-ink-muted">{t('results:monthlyInstalment')}</dt>
-                      <dd className="text-xl font-bold text-ink tabular-nums">
+                      <dt className="text-sm text-ink">{t('results:monthlyInstalment')}</dt>
+                      <dd data-testid="result-monthly-instalment" className="text-xl font-bold text-ink tabular-nums">
                         {formatZAR(estimate.monthlyRepayment)}
                       </dd>
                     </div>
                     <div className="rounded-lg bg-brand-soft p-3">
-                      <dt className="text-sm text-ink-muted">{t('results:borrowingCost')}</dt>
-                      <dd className="text-xl font-bold text-ink tabular-nums">
+                      <dt className="text-sm text-ink">{t('results:borrowingCost')}</dt>
+                      <dd data-testid="result-borrowing-cost" className="text-xl font-bold text-ink tabular-nums">
                         {formatZAR(estimate.totalBorrowingCost)}
                       </dd>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <dt className="text-sm text-ink-muted">{t('results:totalRepayment')}</dt>
-                      <dd className="text-lg font-semibold text-ink tabular-nums">
+                      <dt className="text-sm text-ink">{t('results:totalRepayment')}</dt>
+                      <dd data-testid="result-total-repayment" className="text-lg font-semibold text-ink tabular-nums">
                         {formatZAR(estimate.totalRepayment)}
                       </dd>
                     </div>
                     <div className="rounded-lg border border-border p-3">
-                      <dt className="text-sm text-ink-muted">{t('results:remainingIncome')}</dt>
-                      <dd className="text-lg font-semibold text-ink tabular-nums">
+                      <dt className="text-sm text-ink">{t('results:remainingIncome')}</dt>
+                      <dd data-testid="result-remaining-income" className="text-lg font-semibold text-ink tabular-nums">
                         {formatZAR(estimate.remainingIncome)}
                       </dd>
                     </div>

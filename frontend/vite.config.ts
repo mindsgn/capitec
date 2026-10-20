@@ -12,6 +12,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Unit tests only: the end-to-end suite in `tests/e2e` is run by Playwright
+    // (`npm run test:e2e`), not Vitest, even though the files share a suffix.
+    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

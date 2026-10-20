@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { useId } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -51,10 +52,12 @@ export function Alert({
   const style = noticeStyles[variant]
   const Icon = style.icon
   const ariaRole = role ?? defaultRoles[variant]
+  const headingId = useId()
 
   return (
     <div
       role={ariaRole}
+      aria-labelledby={heading ? headingId : undefined}
       className={cn(
         'flex items-start gap-3 rounded-lg border p-4 text-sm leading-relaxed',
         style.container,
@@ -64,7 +67,11 @@ export function Alert({
       <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
       <div className="flex-1">
         <span className="sr-only">{t(style.srLabelKey)} </span>
-        {heading ? <p className="font-semibold">{heading}</p> : null}
+        {heading ? (
+          <p id={headingId} className="font-semibold">
+            {heading}
+          </p>
+        ) : null}
         <div>{children}</div>
       </div>
       {onDismiss ? (
