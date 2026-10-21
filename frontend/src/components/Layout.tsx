@@ -1,22 +1,17 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button-variants';
-import { useSim } from '@/state/SimulatorContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 export function Header() {
   const { t } = useTranslation();
-  const { hasProgress } = useSim();
-  const link = ({ isActive }: { isActive: boolean }) => cn('hidden rounded-full px-4 py-2 text-sm font-semibold hover:bg-secondary sm:inline-block', isActive && 'text-primary');
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-primary">
-          <img src="/logo.png" alt="" data-testid="header-logo" className="h-7 w-auto object-contain" />
-          {t('brand.name')}
+      <div className="container flex h-16 items-center justify-between gap-3">
+        <Link to="/" className="flex min-w-0 items-center gap-2 text-xl font-extrabold tracking-tight text-primary">
+          <img src="/logo.png" alt="" data-testid="header-logo" className="h-7 w-auto shrink-0 object-contain" />
+          <span className="truncate">{t('brand.name')}</span>
         </Link>
-        <nav aria-label={t('nav.label')} className="flex items-center gap-1">
-        </nav>
+        <LanguageSwitcher />
       </div>
     </header>
   );

@@ -1,6 +1,6 @@
 const en = {
   brand: { name: 'Capitec' },
-  nav: { label: 'Main', home: 'Home', start: 'Start simulation', resume: 'Resume', skip: 'Skip to content' },
+  nav: { label: 'Main', home: 'Home', start: 'Start simulation', resume: 'Resume', skip: 'Skip to content', language: 'Language' },
   footer: {
     disclaimer: 'Results are indicative only and are not an offer of credit. Rates and limits come from the simulated lending rules, and approval depends on a full credit and affordability assessment.',
     brandNote: 'Independent demo inspired by Capitec Bank. Not affiliated with or endorsed by Capitec. Eligibility uses a simulated API on this site. Uploaded documents stay on your device.',

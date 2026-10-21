@@ -113,8 +113,8 @@ export default function Simulator() {
         <h1 className="sr-only">{t('seo.simulator.h1')}</h1>
         {!submitted && (
           <div className="mx-auto mb-6 w-full max-w-2xl space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <ol className="flex gap-2" aria-label={t('phase.label')}>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <ol className="flex flex-wrap gap-2" aria-label={t('phase.label')}>
                 {phases.map((p) => (
                   <li key={p.id} aria-current={state.phase === p.id ? 'step' : undefined}
                     className={cn('rounded-full px-4 py-1.5 text-sm font-semibold', state.phase === p.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>

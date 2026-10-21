@@ -5,18 +5,19 @@ import { ArrowRight, ClipboardCheck, Calculator, ShieldCheck } from 'lucide-reac
 import { BlurText } from '@/components/effects/BlurText';
 import { ShimmerButton } from '@/components/effects/ShimmerButton';
 import { Seo } from '@/components/Seo';
+import { languageByCode } from '@/i18n/languages';
 import { SITE_URL } from '@/lib/site';
 import { useSim } from '@/state/SimulatorContext';
 
 const FAQ_KEYS = ['one', 'two', 'three', 'four'] as const;
 
 export default function Landing() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { hasProgress } = useSim();
   const reduce = useReducedMotion();
 
   const jsonLd = [
-    { '@context': 'https://schema.org', '@type': 'WebApplication', name: t('brand.name'), url: SITE_URL, applicationCategory: 'FinanceApplication', operatingSystem: 'Any', inLanguage: 'en-ZA', description: t('seo.home.desc'), offers: { '@type': 'Offer', price: '0', priceCurrency: 'ZAR' } },
+    { '@context': 'https://schema.org', '@type': 'WebApplication', name: t('brand.name'), url: SITE_URL, applicationCategory: 'FinanceApplication', operatingSystem: 'Any', inLanguage: languageByCode(i18n.resolvedLanguage ?? i18n.language).locale, description: t('seo.home.desc'), offers: { '@type': 'Offer', price: '0', priceCurrency: 'ZAR' } },
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ_KEYS.map((k) => ({ '@type': 'Question', name: t(`faq.${k}.q`), acceptedAnswer: { '@type': 'Answer', text: t(`faq.${k}.a`) } })) },
   ];
 

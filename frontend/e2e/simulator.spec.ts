@@ -22,6 +22,16 @@ test.describe('landing page and SEO', () => {
     await expect(page.locator('header').getByRole('link', { name: 'Capitec' })).toHaveAttribute('href', '/');
   });
 
+  test('switches the page to Afrikaans and keeps that choice after reload', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('Language').selectOption('af');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/bekostig/i);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'af');
+    await page.reload();
+    await expect(page.getByLabel('Taal')).toHaveValue('af');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/bekostig/i);
+  });
+
   test('unknown routes show a not-found state', async ({ page }) => {
     await page.goto('/nope');
     await expect(page.getByRole('heading', { name: /could not find/i })).toBeVisible();

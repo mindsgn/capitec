@@ -1,14 +1,17 @@
 import { Helmet } from 'react-helmet-async';
+import { useTranslation } from 'react-i18next';
+import { languageByCode } from '@/i18n/languages';
 import { SITE_URL } from '@/lib/site';
 
 interface Props { title: string; description: string; path?: string; noindex?: boolean; jsonLd?: object | object[] }
 
 export function Seo({ title, description, path = '/', noindex, jsonLd }: Props) {
+  const { i18n } = useTranslation();
   const url = `${SITE_URL}${path}`;
   const image = `${SITE_URL}/og-image.png`;
   return (
     <Helmet>
-      <html lang="en" />
+      <html lang={languageByCode(i18n.resolvedLanguage ?? i18n.language).htmlLang} />
       <title>{title}</title>
       <meta name="description" content={description} />
       <meta name="robots" content={noindex ? 'noindex,nofollow' : 'index,follow'} />

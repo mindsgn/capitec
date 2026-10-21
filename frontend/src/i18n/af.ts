@@ -1,6 +1,6 @@
 const af = {
   brand: { name: 'Capitec' },
-  nav: { label: 'Hoofkieslys', home: 'Tuis', start: 'Begin simulasie', resume: 'Hervat', skip: 'Slaan oor na inhoud' },
+  nav: { label: 'Hoofkieslys', home: 'Tuis', start: 'Begin simulasie', resume: 'Hervat', skip: 'Slaan oor na inhoud', language: 'Taal' },
   footer: {
     disclaimer: 'Resultate is slegs aanduidend en is nie ’n kredietaanbod nie. Rentekoerse en limiete is gebaseer op die gesimuleerde uitleenreëls, en goedkeuring hang af van ’n volledige krediet- en bekostigbaarheidsbeoordeling.',
     brandNote: 'Onafhanklike demonstrasie geïnspireer deur Capitec Bank. Nie verbonde aan Capitec nie en nie deur Capitec onderskryf nie. Geskiktheid word met ’n gesimuleerde API op hierdie webwerf nagegaan. Opgelaaide dokumente bly op jou toestel.',
