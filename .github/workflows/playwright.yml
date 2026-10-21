@@ -1,8 +1,11 @@
 name: CI
 
+# Branch pushes and pull requests both run these jobs. Require "unit" and "e2e"
+# in a main-branch ruleset so GitHub rejects the merge until they pass.
 on:
   push:
-    branches: [main]
+    branches:
+      - "**"
   pull_request:
   workflow_dispatch:
     inputs:
@@ -15,11 +18,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  check:
+  unit:
+    name: unit
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -52,6 +56,7 @@ jobs:
         run: yarn test
 
   e2e:
+    name: e2e
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
@@ -129,7 +134,7 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.sha != '')
-    needs: [check, e2e, image]
+    needs: [unit, e2e, image]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
