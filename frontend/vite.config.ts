@@ -4,7 +4,9 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { handleLoanApi } from './src/mocks/loansApi';
 
-/** Serves the loan mock on the Vite dev server. Production uses `server/index.ts`. */
+import { cloudflare } from '@cloudflare/vite-plugin';
+
+/** Serves the loan mock on the Vite dev server. Production uses the Worker and `server/index.ts`. */
 function loansApiPlugin(): Plugin {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     const urlPath = (req.url ?? '').split('?')[0] ?? '';
@@ -37,7 +39,7 @@ function loansApiPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), loansApiPlugin()],
+  plugins: [react(), loansApiPlugin(), cloudflare({ viteEnvironment: { name: 'worker' } })],
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   server: { port: 5173 },
 });

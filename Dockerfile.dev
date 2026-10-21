@@ -1,10 +1,16 @@
 # Local editing. Vite serves the app and the loan mock; production uses Dockerfile.
-ARG NODE_VERSION=24.14.0-alpine
+# workerd (started by @cloudflare/vite-plugin) is a glibc binary linked to libc++.
+# On Alpine, the musl loader is missing and Node fails with spawn ENOENT.
+ARG NODE_VERSION=24.14.0-bookworm-slim
 FROM node:${NODE_VERSION} AS dev
 
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare yarn@1.22.22 --activate
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends libc++1 \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable \
+  && corepack prepare yarn@1.22.22 --activate
 
 COPY frontend/package.json frontend/yarn.lock ./
 RUN yarn install --frozen-lockfile

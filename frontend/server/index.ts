@@ -6,7 +6,19 @@ import { handleLoanApi } from '../src/mocks/loansApi';
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = 1024 * 1024;
-const DIST = join(process.cwd(), 'dist');
+
+/** The Cloudflare Vite plugin writes the client build to `dist/client` when a Worker entry exists. */
+function resolveDist(): string {
+  const client = join(process.cwd(), 'dist', 'client');
+  try {
+    if (statSync(join(client, 'index.html')).isFile()) return client;
+  } catch {
+    // Assets-only builds keep index.html in dist/.
+  }
+  return join(process.cwd(), 'dist');
+}
+
+const DIST = resolveDist();
 
 const CONTENT_TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
