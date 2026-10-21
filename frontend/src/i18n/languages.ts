@@ -9,6 +9,7 @@ import en from './en';
 export const LANGUAGES = [
   { code: 'en', label: 'English', htmlLang: 'en', locale: 'en-ZA' },
   { code: 'af', label: 'Afrikaans', htmlLang: 'af', locale: 'af-ZA' },
+  { code: 'zu', label: 'Zuu', htmlLang: 'zu', locale: 'zu-ZA' },
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number];
