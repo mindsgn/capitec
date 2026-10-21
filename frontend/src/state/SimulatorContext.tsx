@@ -35,10 +35,12 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     const api = useLoanApi.getState();
     let amount = c.defaultAmount;
     let months = c.defaultTerm;
-    if (api.rules && api.products) {
-      const limits = boundsForLoan(id, api.rules, api.products);
-      amount = Math.min(limits.maxAmount, Math.max(limits.minAmount, amount));
-      months = Math.min(limits.maxTerm, Math.max(limits.minTerm, months));
+    if (api.products) {
+      const limits = boundsForLoan(id, api.products);
+      if (limits) {
+        amount = Math.min(limits.maxAmount, Math.max(limits.minAmount, amount));
+        months = Math.min(limits.maxTerm, Math.max(limits.minTerm, months));
+      }
     }
     api.clearDecision();
     setState((s) => s.loanType === id ? s : {

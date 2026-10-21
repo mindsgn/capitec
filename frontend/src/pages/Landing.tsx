@@ -37,7 +37,7 @@ export default function Landing() {
           </div>
           <m.div initial={reduce ? false : { opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="rounded-2xl bg-white p-6 text-foreground shadow-2xl">
             <p className="text-sm text-muted-foreground">{t('landing.card.label')}</p>
-            <p className="text-4xl font-extrabold text-primary">R 1 112,40<span className="text-base font-semibold text-muted-foreground"> {t('common.perMonth')}</span></p>
+            <p className="text-4xl font-extrabold text-primary">R 669,07<span className="text-base font-semibold text-muted-foreground"> {t('common.perMonth')}</span></p>
             <div className="mt-4 h-3 overflow-hidden rounded-full bg-muted"><div className="h-full w-[38%] rounded-full bg-success" /></div>
             <p className="mt-2 text-sm text-muted-foreground">{t('landing.card.caption')}</p>
           </m.div>

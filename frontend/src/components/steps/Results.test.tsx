@@ -3,13 +3,26 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { LazyMotion, domAnimation } from 'motion/react';
+import type { RateRequest } from '@/lib/api/contracts';
 import { ResultsStep } from '@/components/steps/Results';
 import '@/i18n';
 import { useSim } from '@/state/SimulatorContext';
 import { initialState, type SimState } from '@/lib/state';
+import { useLoanApi } from '@/state/loanApiStore';
+import { LOAN_PRODUCTS, VALIDATION_RULES } from '@/mocks/loansApi';
 import type { Flow } from '@/components/steps/types';
 
 jest.mock('@/state/SimulatorContext', () => ({ useSim: jest.fn() }));
+
+jest.mock('@/lib/api/client', () => {
+  const { calculateRate } = jest.requireActual<typeof import('@/mocks/loansApi')>('@/mocks/loansApi');
+  return {
+    postRate: (body: RateRequest) => Promise.resolve(calculateRate(body)),
+    postEligibility: jest.fn(),
+    fetchProducts: jest.fn(),
+    fetchValidationRules: jest.fn(),
+  };
+});
 
 const mockUseSim = useSim as unknown as jest.Mock;
 
@@ -38,11 +51,22 @@ const affordableState: SimState = {
 const unaffordableState: SimState = {
   ...affordableState,
   income: { grossIncome: 8000, netIncome: 6500 },
-  expenses: { housing: 1200, transport: 1200, living: 1200, other: 1200, existingDebt: 1200 },
+  expenses: { housing: 6000, transport: 500, living: 500, other: 500, existingDebt: 500 },
 };
 
 describe('ResultsStep', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useLoanApi.setState({
+      status: 'ready',
+      rules: VALIDATION_RULES,
+      products: LOAN_PRODUCTS,
+      quoteStatus: 'idle',
+      quote: null,
+      quoteKey: null,
+      quoteError: null,
+    });
+  });
 
   test('shows the empty state and sends the user back to the start when inputs are missing', () => {
     const flow = makeFlow();
@@ -67,9 +91,9 @@ describe('ResultsStep', () => {
     mockUseSim.mockReturnValue({ state: affordableState });
     renderStep(affordableState, makeFlow());
 
-    await waitFor(() => expect(screen.getByTestId('instalment').textContent).toMatch(/^R\s?[\d.,\s]+$/), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByTestId('instalment').textContent).toMatch(/669/), { timeout: 3000 });
     const verdict = screen.getByTestId('verdict');
-    expect(verdict.getAttribute('data-verdict')).toMatch(/affordable|stretch/);
+    expect(verdict.getAttribute('data-verdict')).toBe('affordable');
     expect((screen.getByRole('button', { name: 'Continue to eligibility' }) as HTMLButtonElement).disabled).toBe(false);
   });
 

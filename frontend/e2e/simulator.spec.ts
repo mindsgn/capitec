@@ -47,8 +47,8 @@ test.describe('affordability flow', () => {
 
   test('shows an instalment and a verdict', async ({ page }) => {
     await completeAffordability(page);
-    await expect(page.getByTestId('instalment')).toContainText('R');
-    await expect(page.getByTestId('verdict')).toHaveAttribute('data-verdict', /affordable|stretch/);
+    await expect(page.getByTestId('instalment')).toContainText('669,07');
+    await expect(page.getByTestId('verdict')).toHaveAttribute('data-verdict', 'affordable');
     await expect(page.getByRole('button', { name: /continue to eligibility/i })).toBeEnabled();
   });
 
@@ -57,7 +57,8 @@ test.describe('affordability flow', () => {
     await page.getByTestId('grossIncome').fill('8000');
     await page.getByTestId('netIncome').fill('6500');
     await cont(page).click();
-    for (const id of ['housing', 'transport', 'living', 'other', 'existingDebt']) await page.getByTestId(id).fill('1200');
+    await page.getByTestId('housing').fill('6000');
+    for (const id of ['transport', 'living', 'other', 'existingDebt']) await page.getByTestId(id).fill('500');
     await cont(page).click();
     await cont(page).click();
     await expect(page.getByTestId('verdict')).toHaveAttribute('data-verdict', 'unaffordable');
@@ -76,7 +77,7 @@ test.describe('loan details step', () => {
 
     // personal loan defaults: R20 000 over 36 months
     await expect(page.getByTestId('term-label')).toHaveText('36 months (3y)');
-    await expect(page.getByText(/estimated instalment at an indicative 24% a year/i)).toBeVisible();
+    await expect(page.getByText(/estimated instalment at an indicative 12\.5% a year/i)).toBeVisible();
 
     // nudge the term forward one month with the keyboard and watch the breakdown follow
     const termSlider = page.getByRole('slider', { name: 'Repayment term' });
@@ -169,6 +170,7 @@ test.describe('eligibility flow', () => {
       await expect(page.getByTestId('uploaded-file')).toBeVisible();
       await cont(page).click();
     }
+    await expect(page.getByTestId('review-instalment')).toContainText('669,07');
     await page.getByRole('button', { name: /submit simulated application/i }).click();
     await expect(page.getByTestId('reference')).toHaveText(/^LS-/);
   });

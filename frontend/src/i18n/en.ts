@@ -2,7 +2,7 @@ const en = {
   brand: { name: 'Capitec' },
   nav: { label: 'Main', home: 'Home', start: 'Start simulation', resume: 'Resume', skip: 'Skip to content' },
   footer: {
-    disclaimer: 'Results are indicative only and are not an offer of credit. Rates, fees and limits are simplified, and approval depends on a full credit and affordability assessment.',
+    disclaimer: 'Results are indicative only and are not an offer of credit. Rates and limits come from the simulated lending rules, and approval depends on a full credit and affordability assessment.',
     brandNote: 'Independent demo inspired by Capitec Bank. Not affiliated with or endorsed by Capitec. Eligibility uses a simulated API on this site. Uploaded documents stay on your device.',
   },
   common: {
@@ -23,23 +23,23 @@ const en = {
     card: { label: 'Example instalment', caption: 'About 38% of the disposable income in this example' },
     how: {
       title: 'How it works', step: 'Step {{n}}',
-      calc: { title: 'Calculate', body: 'Share your income, expenses and the loan you want. See the instalment, total cost and fees update as you adjust the amount and term.' },
+      calc: { title: 'Calculate', body: 'Share your income, expenses and the loan you want. The instalment and total cost update as you adjust the amount and term.' },
       check: { title: 'Check affordability', body: 'We compare the instalment with what is left after your expenses and existing debt, and tell you if it is affordable, a stretch or out of reach.' },
       docs: { title: 'Prepare documents', body: 'Confirm the basic requirements, then upload each document one at a time. Uploads are simulated, so nothing leaves your device.' },
     },
-    loans: { title: 'Choose the loan you want to test', subtitle: 'Each loan type has its own amount range, term and document list.', try: 'Simulate this loan' },
+    loans: { title: 'Choose the loan you want to test', subtitle: 'Documents depend on the loan. The amount, term and rate come from the lending product.', try: 'Simulate this loan' },
     faq: 'Frequently asked questions',
   },
   faq: {
     one: { q: 'Does this guarantee my loan will be approved?', a: 'No. Meeting the basic requirements does not guarantee approval. The lender still runs credit and affordability assessments before deciding.' },
     two: { q: 'Is my information sent anywhere?', a: 'Your answers stay in this browser so you can refresh without losing your place. The eligibility check calls a simulated API on this site, and uploaded documents still never leave your device.' },
     three: { q: 'Why are affordability and eligibility separate?', a: 'Affordability is about the numbers: can your budget carry the instalment. Eligibility is about the rules and paperwork: age, ID, income proof and other documents.' },
-    four: { q: 'Are the interest rates and fees exact?', a: 'They are indicative. Your real rate, term and amount are set by the lender after assessing you, so treat the results as a planning guide.' },
+    four: { q: 'Are the interest rates exact?', a: 'They come from the lending calculator and are indicative. Your real rate, term and amount are set after a full assessment, so treat the results as a planning guide.' },
   },
   loans: {
-    personal: { name: 'Personal loan', blurb: 'Flexible cash for whatever you need, up to R500 000.' },
+    personal: { name: 'Personal loan', blurb: 'Flexible cash for whatever you need.' },
     vehicle: { name: 'Vehicle loan', blurb: 'Finance a car with a quotation for the vehicle you want.' },
-    home: { name: 'Home loan', blurb: 'Buy a property with a bond over up to 30 years.' },
+    home: { name: 'Home loan', blurb: 'Buy a property with a home loan.' },
     education: { name: 'Education loan', blurb: 'Cover tuition and fees from an education provider.' },
     homeImprovement: { name: 'Home improvement loan', blurb: 'Building, renovations and DIY projects.' },
     medical: { name: 'Medical loan', blurb: 'Pay for a medical service with a provider quotation or invoice.' },
@@ -49,7 +49,7 @@ const en = {
     loanType: { title: 'Which loan do you want to test?', desc: 'Pick one to begin. You can change it later, but your loan amount will reset.' },
     income: { title: 'Your monthly income', desc: 'Use your typical monthly figures. Include all regular income.' },
     expenses: { title: 'Your monthly expenses', desc: 'Enter 0 for anything that does not apply. Be honest, as this drives the result.' },
-    loanDetails: { title: 'Your {{loan}}', desc: 'Choose how much you want to borrow and over how long.', preview: 'Estimated instalment at an indicative {{rate}}% a year' },
+    loanDetails: { title: 'Your {{loan}}', desc: 'Choose how much you want to borrow and over how long.', preview: 'Estimated instalment at an indicative {{rate}}% a year', calculating: 'Calculating the instalment from the lending rate' },
   },
   fields: {
     grossIncome: 'Gross monthly income', grossIncomeHint: 'Before tax and deductions.',
@@ -68,16 +68,17 @@ const en = {
   results: {
     emptyTitle: 'We need a few more details', emptyBody: 'Some of your answers are missing, so we cannot calculate your result yet.', emptyAction: 'Go back to the start',
     loading: 'Calculating your result', title: 'Your affordability result', desc: 'Here is what your {{loan}} could look like.',
-    continue: 'Continue to eligibility', instalment: 'Estimated monthly instalment', basis: 'Over {{months}} months at an indicative {{rate}}% a year, including monthly service fee.',
-    total: 'Total repayable', interest: 'Interest', fees: 'Fees', dti: 'Debt vs gross income',
+    continue: 'Continue to eligibility', instalment: 'Estimated monthly instalment', basis: 'Over {{months}} months at an indicative {{rate}}% a year.',
+    total: 'Total repayable', interest: 'Interest', rate: 'Interest rate', dti: 'Debt to income',
+    quoteError: 'We could not calculate this instalment.',
     verdict: {
-      affordable: { title: 'Looks affordable', body: 'The instalment uses 70% or less of the money left after your expenses and existing debt.' },
-      stretch: { title: 'A stretch on your budget', body: 'You could cover it, but it would use most of your spare money. Consider a smaller amount or a longer term.' },
-      unaffordable: { title: 'Not affordable right now', body: 'The instalment is more than you have left each month. Reduce the amount or extend the term to continue.' },
+      affordable: { title: 'Looks affordable', body: 'The instalment fits the money left after your expenses, and your debt level looks manageable.' },
+      stretch: { title: 'A stretch on your budget', body: 'You could cover the instalment, but your spare income or existing debt makes this a stretch. Consider a smaller amount or a longer term.' },
+      unaffordable: { title: 'Not affordable right now', body: 'The instalment is more than you have left each month, or the amount is above what you qualify for. Reduce the amount or extend the term to continue.' },
     },
     disposable: 'Money left each month before this loan', usageLabel: 'Instalment uses {{pct}}% of money left each month', remaining: 'After the instalment you would have {{remaining}} left each month.',
     maxLoan: 'For {{months}} months, an amount around {{amount}} would sit comfortably within your budget.', maxLoanNone: 'With your current numbers no amount in this loan range fits comfortably. Try a longer term or lower expenses.',
-    indicative: 'Indicative only. Rates and fees are simplified and the lender sets your final terms.',
+    indicative: 'Indicative only. This rate comes from the lending calculator, and the lender sets your final terms.',
   },
   elig: {
     basics: {
@@ -104,7 +105,7 @@ const en = {
   employment: { employed: 'Employed', self_employed: 'Self-employed', unemployed: 'Unemployed', retired: 'Retired' },
   purpose: {
     debt_consolidation: 'Debt consolidation', home_improvement: 'Home improvement', education: 'Education', medical: 'Medical', other: 'Other',
-    new_vehicle: 'New vehicle', used_vehicle: 'Used vehicle',
+    new_vehicle: 'New vehicle', used_vehicle: 'Used vehicle', home_purchase: 'Buying a home',
   },
   req: {
     saId: 'I have a valid South African ID.', validId: 'I have valid identification and meet the lender\'s minimum age.',

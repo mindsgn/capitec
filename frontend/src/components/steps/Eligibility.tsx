@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { EMPLOYMENT_STATUSES, LOAN_PURPOSES, type EmploymentStatus, type LoanProduct, type LoanPurpose, type ValidationRules } from '@/lib/api/contracts';
 import { hasApiProduct, mapEligibilityRequest, mapRateRequest, purposesFor } from '@/lib/api/mapLoan';
-import { simulateLoan } from '@/lib/calc';
+import { ageBand } from '@/lib/api/rulesSchema';
 import { asksMaritalQuestion, asksSalaryQuestion, docsFor, LOAN_MAP } from '@/lib/loans';
 import { basicsSchema, translateIssue, validate } from '@/lib/schemas';
 import { makeReference, simulateSubmit, simulateUpload, validateFile } from '@/lib/upload';
@@ -39,8 +39,7 @@ function BasicsFields({ flow, rules, products }: { flow: Flow; rules: Validation
   const patch = (p: Partial<typeof state.elig>) => update((s) => ({ ...s, elig: { ...s.elig, ...p } }));
   const toggle = (id: string, on: boolean) => patch({ confirmed: on ? Array.from(new Set([...confirmed, id])) : confirmed.filter((c) => c !== id) });
   const err = (key: string) => (errors[key] ? translateIssue(t, errors[key]) : undefined);
-  const ageMin = Math.max(cfg.minAge, rules.personalInfo.age.min ?? cfg.minAge);
-  const ageMax = Math.min(cfg.maxAge, rules.personalInfo.age.max ?? cfg.maxAge);
+  const { min: ageMin, max: ageMax } = ageBand(rules);
 
   return (
     <StepShell title={t('elig.basics.title')} description={t('elig.basics.desc', { loan: t(`loans.${cfg.id}.name`).toLowerCase() })} onBack={flow.back} onNext={flow.next} nextDisabled={Object.keys(errors).length > 0}>
@@ -293,12 +292,12 @@ export function ReviewStep({ flow }: { flow: Flow }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
   const decision = useLoanApi((s) => s.eligibility);
+  const rate = useLoanApi((s) => s.rate);
   const [busy, setBusy] = useState(false);
   if (!state.loanType) return null;
   const cfg = LOAN_MAP[state.loanType];
   const docs = docsFor(cfg, { ...state.elig, amount: state.loan.amount });
   const missing = docs.filter((d) => !d.optional && !state.elig.docs[d.id]);
-  const quote = state.loan.amount && state.loan.months ? simulateLoan({ amount: state.loan.amount, months: state.loan.months, ratePct: cfg.rate }) : null;
 
   async function submit() {
     setBusy(true);
@@ -325,7 +324,7 @@ export function ReviewStep({ flow }: { flow: Flow }) {
         <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.review.loan')}</dt><dd className="font-bold">{t(`loans.${cfg.id}.name`)}</dd></div>
         <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.review.amount')}</dt><dd className="font-bold">{formatZAR(state.loan.amount ?? 0)}</dd></div>
         <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.review.term')}</dt><dd className="font-bold">{t('fields.termValue', { months: state.loan.months ?? 0 })}</dd></div>
-        <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('results.instalment')}</dt><dd className="font-bold">{quote ? formatZAR(quote.instalment) : '–'}</dd></div>
+        <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('results.instalment')}</dt><dd className="font-bold" data-testid="review-instalment">{rate ? formatZAR(rate.monthlyPayment, true) : '–'}</dd></div>
       </dl>
       {docs.length === 0 ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">{t('elig.review.empty')}</p>

@@ -1,25 +1,28 @@
 import type { LoanTypeId } from '@/lib/loans';
-import { LOAN_MAP } from '@/lib/loans';
 import type { SimState } from '@/lib/state';
-import type { ApiLoanType, EligibilityRequest, LoanProduct, LoanPurpose, RateRequest, ValidationRules } from './contracts';
+import type { ApiLoanType, EligibilityRequest, LoanProduct, LoanPurpose, RateRequest } from './contracts';
 
 export interface ProductMapping {
   productId: ApiLoanType;
   purpose: LoanPurpose;
 }
 
-/** Existing simulator loans mapped onto the two mock products. Home has no product. */
-export const PRODUCT_BY_LOAN: Record<LoanTypeId, ProductMapping | null> = {
+/**
+ * Each journey uses one lending product.
+ * Education, medical, home improvement and multiple-income are purposes of personal_loan,
+ * as published. Home is its own product so that path gets a rate and a decision too.
+ */
+export const PRODUCT_BY_LOAN: Record<LoanTypeId, ProductMapping> = {
   personal: { productId: 'personal_loan', purpose: 'other' },
   multiIncome: { productId: 'personal_loan', purpose: 'other' },
   homeImprovement: { productId: 'personal_loan', purpose: 'home_improvement' },
   education: { productId: 'personal_loan', purpose: 'education' },
   medical: { productId: 'personal_loan', purpose: 'medical' },
   vehicle: { productId: 'vehicle_loan', purpose: 'used_vehicle' },
-  home: null,
+  home: { productId: 'home_loan', purpose: 'home_purchase' },
 };
 
-export const hasApiProduct = (id: LoanTypeId | null): boolean => id != null && PRODUCT_BY_LOAN[id] != null;
+export const hasApiProduct = (id: LoanTypeId | null): boolean => id != null;
 
 export interface LoanLimits {
   minAmount: number;
@@ -28,29 +31,23 @@ export interface LoanLimits {
   maxTerm: number;
 }
 
-export function boundsForLoan(loanType: LoanTypeId, rules: ValidationRules, products: LoanProduct[]): LoanLimits {
-  const local = LOAN_MAP[loanType];
-  const mapped = PRODUCT_BY_LOAN[loanType];
-  if (!mapped) return { minAmount: local.minAmount, maxAmount: local.maxAmount, minTerm: local.minTerm, maxTerm: local.maxTerm };
-  if (mapped.productId === 'personal_loan') {
-    const amount = rules.loanDetails.requestedAmount;
-    const term = rules.loanDetails.loanTerm;
-    return {
-      minAmount: amount.min ?? local.minAmount,
-      maxAmount: amount.max ?? local.maxAmount,
-      minTerm: term.min ?? local.minTerm,
-      maxTerm: term.max ?? local.maxTerm,
-    };
-  }
-  const product = products.find((item) => item.id === mapped.productId);
-  if (!product) return { minAmount: local.minAmount, maxAmount: local.maxAmount, minTerm: local.minTerm, maxTerm: local.maxTerm };
+export function productForLoan(loanType: LoanTypeId, products: LoanProduct[]): LoanProduct | null {
+  return products.find((item) => item.id === PRODUCT_BY_LOAN[loanType].productId) ?? null;
+}
+
+/** Amount and term limits from the lending product. Validation-rules messages still apply to personal loans. */
+export function boundsForLoan(loanType: LoanTypeId, products: LoanProduct[]): LoanLimits | null {
+  const product = productForLoan(loanType, products);
+  if (!product) return null;
   return { minAmount: product.minAmount, maxAmount: product.maxAmount, minTerm: product.minTerm, maxTerm: product.maxTerm };
 }
 
 export function purposesFor(loanType: LoanTypeId, products: LoanProduct[]): LoanPurpose[] {
-  const mapped = PRODUCT_BY_LOAN[loanType];
-  if (!mapped) return [];
-  return products.find((item) => item.id === mapped.productId)?.purposes ?? [];
+  return products.find((item) => item.id === PRODUCT_BY_LOAN[loanType].productId)?.purposes ?? [];
+}
+
+export function rateRequestKey(body: RateRequest): string {
+  return `${body.loanType}:${body.loanAmount}:${body.loanTerm}:${body.creditScore ?? ''}`;
 }
 
 function monthlyExpensesOf(expenses: SimState['expenses']): number | null {
@@ -63,7 +60,6 @@ function monthlyExpensesOf(expenses: SimState['expenses']): number | null {
 export function mapEligibilityRequest(state: SimState): EligibilityRequest | null {
   if (!state.loanType) return null;
   const mapped = PRODUCT_BY_LOAN[state.loanType];
-  if (!mapped) return null;
   const { age, employmentStatus, employmentDuration, creditScore, loanPurpose } = state.elig;
   const monthlyExpenses = monthlyExpensesOf(state.expenses);
   const { netIncome } = state.income;
@@ -87,7 +83,6 @@ export function mapEligibilityRequest(state: SimState): EligibilityRequest | nul
 export function mapRateRequest(state: SimState): RateRequest | null {
   if (!state.loanType || state.loan.amount == null || state.loan.months == null) return null;
   const mapped = PRODUCT_BY_LOAN[state.loanType];
-  if (!mapped) return null;
   return {
     loanAmount: state.loan.amount,
     loanTerm: state.loan.months,

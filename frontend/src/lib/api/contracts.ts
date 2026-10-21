@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
 export const EMPLOYMENT_STATUSES = ['employed', 'self_employed', 'unemployed', 'retired'] as const;
-export const LOAN_PURPOSES = ['debt_consolidation', 'home_improvement', 'education', 'medical', 'other', 'new_vehicle', 'used_vehicle'] as const;
-export const API_LOAN_TYPES = ['personal_loan', 'vehicle_loan'] as const;
+export const LOAN_PURPOSES = ['debt_consolidation', 'home_improvement', 'education', 'medical', 'other', 'new_vehicle', 'used_vehicle', 'home_purchase'] as const;
+export const API_LOAN_TYPES = ['personal_loan', 'vehicle_loan', 'home_loan'] as const;
 export const RISK_CATEGORIES = ['low', 'medium', 'high'] as const;
 export const AFFORDABILITY_SCORES = ['good', 'fair', 'poor'] as const;
 
 export type EmploymentStatus = (typeof EMPLOYMENT_STATUSES)[number];
 export type LoanPurpose = (typeof LOAN_PURPOSES)[number];
 export type ApiLoanType = (typeof API_LOAN_TYPES)[number];
+export type AffordabilityScore = (typeof AFFORDABILITY_SCORES)[number];
 
 const numberRuleSchema = z.object({
   min: z.number().optional(),

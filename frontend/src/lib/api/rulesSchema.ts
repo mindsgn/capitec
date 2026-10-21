@@ -1,12 +1,11 @@
 import { z } from 'zod';
-import type { LoanConfig } from '@/lib/loans';
 import type { NumberRule, OptionsRule, ValidationRules } from './contracts';
 
-/** The stricter of the loan's own age band and the validation-rules band. */
-export function ageBand(loan: LoanConfig, rules: ValidationRules): { min: number; max: number } {
+/** Age limits published by GET /api/loans/validation-rules. Every product uses this band. */
+export function ageBand(rules: ValidationRules): { min: number; max: number } {
   return {
-    min: Math.max(loan.minAge, rules.personalInfo.age.min ?? loan.minAge),
-    max: Math.min(loan.maxAge, rules.personalInfo.age.max ?? loan.maxAge),
+    min: rules.personalInfo.age.min ?? 18,
+    max: rules.personalInfo.age.max ?? 65,
   };
 }
 

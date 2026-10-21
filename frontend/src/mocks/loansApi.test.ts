@@ -39,6 +39,17 @@ describe('loan mock catalogue', () => {
           interestRateRange: { min: 8.5, max: 15 },
           purposes: ['new_vehicle', 'used_vehicle'],
         },
+        {
+          id: 'home_loan',
+          name: 'Home Loan',
+          description: 'Bond finance for buying a property',
+          minAmount: 300000,
+          maxAmount: 5000000,
+          minTerm: 60,
+          maxTerm: 360,
+          interestRateRange: { min: 9.75, max: 16 },
+          purposes: ['home_purchase'],
+        },
       ],
     } satisfies ProductsResponse);
   });
@@ -139,6 +150,31 @@ describe('interest rate calculator', () => {
   it('uses a credit score of 650 when the rate request omits one', () => {
     const res = post('/api/loans/calculate-rate', { loanAmount: 150000, loanTerm: 24, loanType: 'personal_loan' });
     expect((res.body as RateResponse).interestRate).toBe(12.5);
+  });
+
+  it('prices the simulator default personal loan at 12.5%', () => {
+    const res = post('/api/loans/calculate-rate', { loanAmount: 20000, loanTerm: 36, creditScore: 650, loanType: 'personal_loan' });
+    const body = res.body as RateResponse;
+    expect(body.interestRate).toBe(12.5);
+    expect(body.monthlyPayment).toBe(669.07);
+  });
+
+  it('prices a home loan on its own product', () => {
+    const res = post('/api/loans/calculate-rate', { loanAmount: 1000000, loanTerm: 240, creditScore: 650, loanType: 'home_loan' });
+    expect(res.status).toBe(200);
+    const body = res.body as RateResponse;
+    expect(body.interestRate).toBe(11.75);
+    expect(body.interestRate).toBeGreaterThanOrEqual(9.75);
+    expect(body.interestRate).toBeLessThanOrEqual(16);
+  });
+
+  it('accepts a home purchase on the eligibility check', () => {
+    const res = post('/api/loans/eligibility', {
+      ...specRequest,
+      loanDetails: { requestedAmount: 1000000, loanTerm: 240, loanPurpose: 'home_purchase' },
+    });
+    expect(res.status).toBe(200);
+    expect((res.body as EligibilityResponse).recommendedLoan.interestRate).toBe(11.75);
   });
 
   it('prices a vehicle loan inside its own rate band', () => {

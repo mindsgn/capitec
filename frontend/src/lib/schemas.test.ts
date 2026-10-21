@@ -1,6 +1,6 @@
 import { basicsSchema, expensesSchema, incomeSchema, loanDetailsSchema, translateIssue, validate } from './schemas';
 import { LOAN_MAP, docsFor } from './loans';
-import { VALIDATION_RULES } from '@/mocks/loansApi';
+import { LOAN_PRODUCTS, VALIDATION_RULES } from '@/mocks/loansApi';
 
 describe('income', () => {
   it('requires values', () => {
@@ -22,10 +22,12 @@ describe('expenses', () => {
 });
 
 describe('loan details', () => {
-  const schema = loanDetailsSchema(LOAN_MAP.personal);
-  it('enforces amount and term bounds', () => {
+  const personal = LOAN_PRODUCTS.find((product) => product.id === 'personal_loan');
+  if (!personal) throw new Error('missing personal loan');
+  const schema = loanDetailsSchema(personal);
+  it('enforces the personal product bounds', () => {
     expect(validate(schema, { amount: 500, months: 36 })).toHaveProperty('amount');
-    expect(validate(schema, { amount: 20000, months: 200 })).toHaveProperty('months');
+    expect(validate(schema, { amount: 20000, months: 84 })).toHaveProperty('months');
     expect(validate(schema, { amount: 20000, months: 36 })).toEqual({});
   });
 });
@@ -34,13 +36,14 @@ describe('basics', () => {
   const employment = { employmentStatus: 'employed' as const, employmentDuration: 12, creditScore: null, loanPurpose: null };
   const c = LOAN_MAP.home;
   const schema = basicsSchema(c, { askSalary: false, askMarital: true }, VALIDATION_RULES, []);
-  it('applies the home loan age band of 18 to 60', () => {
+  it('uses the lending age band of 18 to 65 for a home loan', () => {
     const ok = { age: 40, confirmed: c.requirements, salaryIntoCapitec: null, married: false, ...employment };
     expect(validate(schema, ok)).toEqual({});
-    expect(validate(schema, { ...ok, age: 61 })).toHaveProperty('age');
+    expect(validate(schema, { ...ok, age: 65 })).toEqual({});
+    expect(validate(schema, { ...ok, age: 66 })).toHaveProperty('age', 'Age must be between 18 and 65');
     expect(validate(schema, { ...ok, age: 17 })).toHaveProperty('age');
   });
-  it('tightens other loans to the rules age maximum of 65', () => {
+  it('uses the same age band for other loans', () => {
     const personal = LOAN_MAP.personal;
     const personalSchema = basicsSchema(personal, { askSalary: true, askMarital: false }, VALIDATION_RULES, ['other']);
     const ok = { age: 65, confirmed: personal.requirements, salaryIntoCapitec: true, married: null, ...employment, loanPurpose: 'other' };

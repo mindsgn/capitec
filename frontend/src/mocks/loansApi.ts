@@ -1,4 +1,11 @@
 import {
+  affordabilityScoreOf,
+  debtToIncomeRatio,
+  disposableIncome,
+  loanToIncomeRatio,
+  maxQualifyingAmount,
+} from '../lib/api/affordability';
+import {
   eligibilityRequestSchema,
   eligibilityResponseSchema,
   productsResponseSchema,
@@ -37,6 +44,17 @@ export const LOAN_PRODUCTS: LoanProduct[] = [
     interestRateRange: { min: 8.5, max: 15 },
     purposes: ['new_vehicle', 'used_vehicle'],
   },
+  {
+    id: 'home_loan',
+    name: 'Home Loan',
+    description: 'Bond finance for buying a property',
+    minAmount: 300000,
+    maxAmount: 5000000,
+    minTerm: 60,
+    maxTerm: 360,
+    interestRateRange: { min: 9.75, max: 16 },
+    purposes: ['home_purchase'],
+  },
 ];
 
 /** Published field rules from GET /api/loans/validation-rules. */
@@ -68,10 +86,10 @@ const NEUTRAL_CREDIT_SCORE = 650;
 const RATE_BANDS: Record<ApiLoanType, ReadonlyArray<readonly [number, number]>> = {
   personal_loan: [[750, 10.5], [700, 11.5], [650, 12.5], [600, 14.5], [550, 16.5], [300, 18.5]],
   vehicle_loan: [[750, 8.5], [700, 9.5], [650, 11], [600, 12.5], [550, 13.5], [300, 15]],
+  home_loan: [[750, 9.75], [700, 10.75], [650, 11.75], [600, 13.25], [550, 14.75], [300, 16]],
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function interestRateFor(score: number | undefined, loanType: ApiLoanType): number {
   const credit = score ?? NEUTRAL_CREDIT_SCORE;
@@ -115,14 +133,6 @@ function productForPurpose(purpose: EligibilityRequest['loanDetails']['loanPurpo
   return LOAN_PRODUCTS.find((product) => product.purposes.includes(purpose));
 }
 
-function maxOffer(disposable: number, term: number, product: LoanProduct): number {
-  if (disposable <= 0) return 0;
-  const raw = round2(disposable * term * 0.75);
-  const capped = Math.min(product.maxAmount, raw);
-  if (capped <= 0) return 0;
-  return Math.max(product.minAmount, capped);
-}
-
 function likelihoodOf(input: { status: EligibilityRequest['personalInfo']['employmentStatus']; duration: number; credit: number; dti: number }): number {
   if (input.status === 'unemployed') return 15;
   let score = 50;
@@ -144,18 +154,15 @@ export function assessEligibility(input: EligibilityRequest): EligibilityRespons
   if (!product) throw new Error('Unknown loan purpose');
   const { monthlyIncome, monthlyExpenses, existingDebt, creditScore } = input.financialInfo;
   const { requestedAmount, loanTerm } = input.loanDetails;
-  const disposableIncome = round2(monthlyIncome - monthlyExpenses);
-  const debtToIncomeRatio = monthlyIncome > 0 ? round1((existingDebt / monthlyIncome) * 100) : 0;
-  const loanToIncomeRatio = monthlyIncome > 0 ? round1((requestedAmount / monthlyIncome) * 10) : 0;
-  const maxAmount = maxOffer(disposableIncome, loanTerm, product);
+  const disposable = disposableIncome(monthlyIncome, monthlyExpenses);
+  const debtToIncome = debtToIncomeRatio(existingDebt, monthlyIncome);
+  const loanToIncome = loanToIncomeRatio(requestedAmount, monthlyIncome);
+  const maxAmount = maxQualifyingAmount(disposable, loanTerm, product);
   const recommendedAmount = round2(Math.min(requestedAmount, maxAmount));
   const credit = creditScore ?? NEUTRAL_CREDIT_SCORE;
   const interestRate = interestRateFor(credit, product.id);
   const quote = amortize(recommendedAmount > 0 ? recommendedAmount : requestedAmount, interestRate, loanTerm);
-  const incomeRatio = monthlyIncome > 0 ? disposableIncome / monthlyIncome : 0;
-  let affordabilityScore: EligibilityResponse['affordabilityAnalysis']['affordabilityScore'] = 'poor';
-  if (disposableIncome > 0 && incomeRatio >= 0.3 && debtToIncomeRatio <= 35) affordabilityScore = 'good';
-  else if (disposableIncome > 0 && incomeRatio >= 0.15 && debtToIncomeRatio <= 50) affordabilityScore = 'fair';
+  const affordabilityScore = affordabilityScoreOf(disposable, monthlyIncome, debtToIncome);
 
   let isEligible = true;
   let decisionReason = affordabilityScore === 'good' ? ELIGIBLE_REASON : 'You meet the minimum requirements for this loan';
@@ -165,13 +172,13 @@ export function assessEligibility(input: EligibilityRequest): EligibilityRespons
   } else if (input.personalInfo.employmentDuration < 3) {
     isEligible = false;
     decisionReason = 'Minimum 3 months employment required';
-  } else if (disposableIncome <= 0) {
+  } else if (disposable <= 0) {
     isEligible = false;
     decisionReason = 'Monthly expenses leave no disposable income';
   } else if (requestedAmount > maxAmount) {
     isEligible = false;
     decisionReason = 'Requested amount is above the maximum you qualify for';
-  } else if (quote.monthlyPayment > disposableIncome) {
+  } else if (quote.monthlyPayment > disposable) {
     isEligible = false;
     decisionReason = 'The instalment is higher than your disposable income';
   }
@@ -180,7 +187,7 @@ export function assessEligibility(input: EligibilityRequest): EligibilityRespons
     status: input.personalInfo.employmentStatus,
     duration: input.personalInfo.employmentDuration,
     credit,
-    dti: debtToIncomeRatio,
+    dti: debtToIncome,
   });
   const riskCategory: EligibilityResponse['eligibilityResult']['riskCategory'] = !isEligible || approvalLikelihood < 40 ? 'high' : approvalLikelihood >= 70 ? 'low' : 'medium';
 
@@ -193,7 +200,7 @@ export function assessEligibility(input: EligibilityRequest): EligibilityRespons
       monthlyPayment: quote.monthlyPayment,
       totalRepayment: quote.totalRepayment,
     },
-    affordabilityAnalysis: { disposableIncome, debtToIncomeRatio, loanToIncomeRatio, affordabilityScore },
+    affordabilityAnalysis: { disposableIncome: disposable, debtToIncomeRatio: debtToIncome, loanToIncomeRatio: loanToIncome, affordabilityScore },
   };
 }
 

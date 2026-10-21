@@ -1,3 +1,7 @@
+/**
+ * Application journeys: icon, confirmations and documents.
+ * Amounts, terms, rates and affordability belong to the lending API.
+ */
 export const LOAN_TYPES = ['personal', 'vehicle', 'home', 'education', 'homeImprovement', 'medical', 'multiIncome'] as const;
 export type LoanTypeId = (typeof LOAN_TYPES)[number];
 export type DocCondition = 'salaryNotCapitec' | 'married' | 'largeHome';
@@ -7,16 +11,9 @@ export type LoanIcon = 'user' | 'car' | 'home' | 'graduation' | 'hammer' | 'hear
 export interface LoanConfig {
   id: LoanTypeId;
   icon: LoanIcon;
-  minAmount: number;
-  maxAmount: number;
+  /** Opening slider values. The selected lending product clamps them to its own limits. */
   defaultAmount: number;
-  minTerm: number;
-  maxTerm: number;
   defaultTerm: number;
-  /** Indicative annual interest rate (%). The real rate is set by the lender's assessment. */
-  rate: number;
-  minAge: number;
-  maxAge: number;
   /** Requirement ids the applicant confirms in the eligibility flow. Labels live in i18n (req.<id>). */
   requirements: string[];
   docs: DocDef[];
@@ -26,26 +23,26 @@ export const LARGE_HOME_THRESHOLD = 2_500_000;
 const BANK3: DocDef = { id: 'bankStatement3', condition: 'salaryNotCapitec' };
 
 export const LOANS: LoanConfig[] = [
-  { id: 'personal', icon: 'user', minAmount: 1000, maxAmount: 500000, defaultAmount: 20000, minTerm: 6, maxTerm: 84, defaultTerm: 36, rate: 24, minAge: 18, maxAge: 100,
+  { id: 'personal', icon: 'user', defaultAmount: 20000, defaultTerm: 36,
     requirements: ['saId', 'stableIncome', 'notDebtAdmin'],
     docs: [{ id: 'saId' }, { id: 'salarySlip' }, BANK3] },
-  { id: 'vehicle', icon: 'car', minAmount: 20000, maxAmount: 1500000, defaultAmount: 250000, minTerm: 12, maxTerm: 72, defaultTerm: 60, rate: 15, minAge: 18, maxAge: 100,
+  { id: 'vehicle', icon: 'car', defaultAmount: 250000, defaultTerm: 60,
     requirements: ['validId', 'stableIncome', 'vehicleConditions'],
     docs: [{ id: 'validId' }, { id: 'payslips' }, { id: 'vehicleQuote' }, { id: 'bankStatementsOptional', optional: true }] },
-  { id: 'home', icon: 'home', minAmount: 300000, maxAmount: 5000000, defaultAmount: 1000000, minTerm: 60, maxTerm: 360, defaultTerm: 240, rate: 11.75, minAge: 18, maxAge: 60,
+  { id: 'home', icon: 'home', defaultAmount: 1000000, defaultTerm: 240,
     requirements: ['permanentOrSelfEmployed', 'goodCredit', 'notDebtCounselling', 'propertyCosts'],
     docs: [{ id: 'salarySlips3' }, { id: 'bankStatementsStamped' }, { id: 'saId' }, { id: 'offerToPurchase' },
       { id: 'marriageCert', condition: 'married' }, { id: 'assetsLiabilities', condition: 'largeHome' }] },
-  { id: 'education', icon: 'graduation', minAmount: 1000, maxAmount: 150000, defaultAmount: 30000, minTerm: 6, maxTerm: 60, defaultTerm: 24, rate: 18, minAge: 18, maxAge: 100,
+  { id: 'education', icon: 'graduation', defaultAmount: 30000, defaultTerm: 24,
     requirements: ['saId', 'stableIncome'],
     docs: [{ id: 'saId' }, { id: 'salarySlips3' }, BANK3, { id: 'feeStatement', optional: true }] },
-  { id: 'homeImprovement', icon: 'hammer', minAmount: 5000, maxAmount: 300000, defaultAmount: 50000, minTerm: 12, maxTerm: 72, defaultTerm: 36, rate: 18, minAge: 18, maxAge: 100,
+  { id: 'homeImprovement', icon: 'hammer', defaultAmount: 50000, defaultTerm: 36,
     requirements: ['saId', 'permanentEmployed', 'qualifyingImprovement'],
     docs: [{ id: 'saId' }, { id: 'salarySlips3' }, BANK3, { id: 'supportingDocs', optional: true }] },
-  { id: 'medical', icon: 'heart', minAmount: 1000, maxAmount: 200000, defaultAmount: 15000, minTerm: 6, maxTerm: 60, defaultTerm: 12, rate: 18, minAge: 18, maxAge: 100,
+  { id: 'medical', icon: 'heart', defaultAmount: 15000, defaultTerm: 12,
     requirements: ['saId', 'stableIncome'],
     docs: [{ id: 'saId' }, { id: 'salarySlips3' }, BANK3, { id: 'medicalInvoice' }] },
-  { id: 'multiIncome', icon: 'layers', minAmount: 1000, maxAmount: 150000, defaultAmount: 15000, minTerm: 6, maxTerm: 60, defaultTerm: 24, rate: 24, minAge: 18, maxAge: 100,
+  { id: 'multiIncome', icon: 'layers', defaultAmount: 15000, defaultTerm: 24,
     requirements: ['saId', 'earns5000For6Months', 'incomeDocumented'],
     docs: [{ id: 'saId' }, { id: 'incomeProof' }] },
 ];

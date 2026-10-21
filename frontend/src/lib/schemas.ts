@@ -60,9 +60,8 @@ const purposeRule = (purposes: readonly string[]) => {
 };
 
 export const basicsSchema = (c: LoanConfig, opts: { askSalary: boolean; askMarital: boolean }, rules: ValidationRules, purposes: readonly string[] = []) => {
-  const band = ageBand(c, rules);
-  const usesRuleAge = band.min === (rules.personalInfo.age.min ?? band.min) && band.max === (rules.personalInfo.age.max ?? band.max);
-  const ageMessage = usesRuleAge ? rules.personalInfo.age.errorMessage : `v.age|${band.min}|${band.max}`;
+  const band = ageBand(rules);
+  const ageMessage = rules.personalInfo.age.errorMessage;
   return z.object({
     age: z.number({ required_error: required, invalid_type_error: required })
       .int(required)

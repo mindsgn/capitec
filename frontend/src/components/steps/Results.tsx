@@ -8,15 +8,17 @@ import { CountUp } from '@/components/effects/CountUp';
 import { StepShell } from '@/components/StepShell';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { assess, maxAffordableAmount, simulateLoan, type Verdict } from '@/lib/calc';
+import { affordabilityScoreOf, budgetVerdict, debtToIncomeRatio, disposableIncome, maxQualifyingAmount, type BudgetVerdict } from '@/lib/api/affordability';
+import { mapRateRequest, PRODUCT_BY_LOAN, productForLoan, rateRequestKey } from '@/lib/api/mapLoan';
 import { sumExpenses } from '@/lib/flow';
 import { useFakeLoading } from '@/lib/hooks';
 import { LOAN_MAP } from '@/lib/loans';
 import { cn, formatZAR } from '@/lib/utils';
 import { useSim } from '@/state/SimulatorContext';
+import { useLoanApi } from '@/state/loanApiStore';
 import type { Flow } from './types';
 
-const VERDICT_UI: Record<Verdict, { icon: typeof CheckCircle2; box: string }> = {
+const VERDICT_UI: Record<BudgetVerdict, { icon: typeof CheckCircle2; box: string }> = {
   affordable: { icon: CheckCircle2, box: 'border-success/40 bg-success/10 text-success' },
   stretch: { icon: AlertTriangle, box: 'border-warning/40 bg-warning/10 text-warning' },
   unaffordable: { icon: XCircle, box: 'border-accent/40 bg-accent/10 text-accent' },
@@ -53,7 +55,7 @@ function ResultsLoadingState() {
   );
 }
 
-function VerdictNotice({ verdict }: { verdict: Verdict }) {
+function VerdictNotice({ verdict }: { verdict: BudgetVerdict }) {
   const { t } = useTranslation();
   const ui = VERDICT_UI[verdict];
   const Icon = ui.icon;
@@ -68,7 +70,7 @@ function VerdictNotice({ verdict }: { verdict: Verdict }) {
   );
 }
 
-function UsageSummary({ verdict, disposable, usage, remaining }: { verdict: Verdict; disposable: number; usage: number; remaining: number }) {
+function UsageSummary({ verdict, disposable, usage, remaining }: { verdict: BudgetVerdict; disposable: number; usage: number; remaining: number }) {
   const { t } = useTranslation();
   const reduce = useReducedMotion();
   const pct = disposable > 0 ? Math.min(100, Math.round(usage * 100)) : 100;
@@ -91,7 +93,7 @@ function UsageSummary({ verdict, disposable, usage, remaining }: { verdict: Verd
   );
 }
 
-function MaxLoanNote({ verdict, max, months }: { verdict: Verdict; max: number; months: number | null }) {
+function MaxLoanNote({ verdict, max, months }: { verdict: BudgetVerdict; max: number; months: number | null }) {
   const { t } = useTranslation();
   if (verdict === 'affordable') return null;
   return (
@@ -101,36 +103,107 @@ function MaxLoanNote({ verdict, max, months }: { verdict: Verdict; max: number; 
   );
 }
 
+function hasInputs(state: { loanType: string | null; income: { grossIncome: number | null; netIncome: number | null }; loan: { amount: number | null; months: number | null }; expenses: Record<string, number | null> }) {
+  const { grossIncome, netIncome } = state.income;
+  const { amount, months } = state.loan;
+  if (!state.loanType || grossIncome == null || netIncome == null || amount == null || months == null) return false;
+  return !Object.values(state.expenses).some((value) => value == null);
+}
+
 export function ResultsStep({ flow }: { flow: Flow }) {
   const { t } = useTranslation();
   const { state } = useSim();
   const loading = useFakeLoading(800);
+  const runQuote = useLoanApi((s) => s.runQuote);
+  const loadReference = useLoanApi((s) => s.loadReference);
+  const quote = useLoanApi((s) => s.quote);
+  const quoteKey = useLoanApi((s) => s.quoteKey);
+  const quoteStatus = useLoanApi((s) => s.quoteStatus);
+  const quoteError = useLoanApi((s) => s.quoteError);
+  const products = useLoanApi((s) => s.products);
+  const referenceStatus = useLoanApi((s) => s.status);
+  const ready = hasInputs(state);
+  const priced = ready ? mapRateRequest(state) : null;
+  const key = priced ? rateRequestKey(priced) : null;
+  const product = state.loanType && products ? productForLoan(state.loanType, products) : null;
+  const quoted = quote != null && quoteStatus === 'ready' && quoteKey === key ? quote : null;
+
+  useEffect(() => { void loadReference(); }, [loadReference]);
+
+  useEffect(() => {
+    if (!state.loanType || state.loan.amount == null || state.loan.months == null) return;
+    void runQuote({
+      loanAmount: state.loan.amount,
+      loanTerm: state.loan.months,
+      creditScore: state.elig.creditScore ?? 650,
+      loanType: PRODUCT_BY_LOAN[state.loanType].productId,
+    });
+  }, [state.loanType, state.loan.amount, state.loan.months, state.elig.creditScore, runQuote]);
 
   const cfg = state.loanType ? LOAN_MAP[state.loanType] : null;
 
   const result = useMemo(() => {
-    const { grossIncome, netIncome } = state.income;
+    const { netIncome } = state.income;
     const { amount, months } = state.loan;
-    const e = state.expenses;
-    if (!cfg || grossIncome == null || netIncome == null || amount == null || months == null) return null;
-    if (Object.values(e).some((v) => v == null)) return null;
-    const quote = simulateLoan({ amount, months, ratePct: cfg.rate });
-    const a = assess({ grossIncome, netIncome, expenses: sumExpenses(e), existingDebt: e.existingDebt ?? 0, instalment: quote.instalment });
-    const max = maxAffordableAmount({ disposable: a.disposable, months, ratePct: cfg.rate, minAmount: cfg.minAmount, maxAmount: cfg.maxAmount });
-    return { quote, a, max };
-  }, [cfg, state.income, state.loan, state.expenses]);
+    if (!quoted || !product || netIncome == null || amount == null || months == null) return null;
+    const expenses = sumExpenses(state.expenses);
+    const disposable = disposableIncome(netIncome, expenses);
+    const dti = debtToIncomeRatio(state.expenses.existingDebt ?? 0, netIncome);
+    const score = affordabilityScoreOf(disposable, netIncome, dti);
+    const max = maxQualifyingAmount(disposable, months, product);
+    const verdict = budgetVerdict({
+      disposable,
+      monthlyPayment: quoted.monthlyPayment,
+      requestedAmount: amount,
+      maxAmount: max,
+      score,
+    });
+    const usage = disposable > 0 ? quoted.monthlyPayment / disposable : Infinity;
+    return {
+      payment: quoted.monthlyPayment,
+      total: quoted.totalRepayment,
+      interest: quoted.totalInterest,
+      rate: quoted.interestRate,
+      verdict,
+      disposable,
+      usage,
+      remaining: Math.round((disposable - quoted.monthlyPayment) * 100) / 100,
+      dti,
+      max,
+    };
+  }, [quoted, product, state.income, state.loan, state.expenses]);
 
   useEffect(() => {
     if (loading || !result) return;
-    if (result.a.verdict === 'unaffordable') toast.error(t('toast.notAffordable'), { id: 'verdict' });
-    else if (result.a.verdict === 'affordable') toast.success(t('toast.affordable'), { id: 'verdict' });
+    if (result.verdict === 'unaffordable') toast.error(t('toast.notAffordable'), { id: 'verdict' });
+    else if (result.verdict === 'affordable') toast.success(t('toast.affordable'), { id: 'verdict' });
     else toast.warning(t('toast.stretch'), { id: 'verdict' });
   }, [loading, result, t]);
 
-  if (!cfg || !result) return <ResultsEmptyState flow={flow} />;
-  if (loading) return <ResultsLoadingState />;
+  if (!cfg || !ready) return <ResultsEmptyState flow={flow} />;
 
-  const { quote, a, max } = result;
+  const failed = quoteStatus === 'error' || referenceStatus === 'error' || (referenceStatus === 'ready' && products != null && !product);
+  if (!loading && failed) {
+    const retry = () => {
+      void loadReference();
+      if (state.loanType && state.loan.amount != null && state.loan.months != null) {
+        void runQuote({
+          loanAmount: state.loan.amount,
+          loanTerm: state.loan.months,
+          creditScore: state.elig.creditScore ?? 650,
+          loanType: PRODUCT_BY_LOAN[state.loanType].productId,
+        });
+      }
+    };
+    return (
+      <StepShell title={t('results.title')} description={t('results.desc', { loan: t(`loans.${cfg.id}.name`).toLowerCase() })} onBack={flow.back} onNext={retry} nextLabel={t('flow.retry')}>
+        <p role="alert" className="text-sm font-medium text-accent">{quoteError || t('results.quoteError')}</p>
+      </StepShell>
+    );
+  }
+
+  if (loading || !result) return <ResultsLoadingState />;
+
   const { months } = state.loan;
 
   return (
@@ -141,24 +214,24 @@ export function ResultsStep({ flow }: { flow: Flow }) {
       onNext={flow.next}
       nextLabel={t('results.continue')}
       nextVariant="accent"
-      nextDisabled={a.verdict === 'unaffordable'}
+      nextDisabled={result.verdict === 'unaffordable'}
     >
       <div className="rounded-lg bg-navy p-6 text-white">
         <p className="text-sm text-white/70">{t('results.instalment')}</p>
-        <p className="text-4xl font-extrabold sm:text-5xl" data-testid="instalment"><CountUp value={quote.instalment} format={(n) => formatZAR(n, true)} /></p>
-        <p className="mt-1 text-sm text-white/70">{t('results.basis', { months, rate: cfg.rate })}</p>
+        <p className="text-4xl font-extrabold sm:text-5xl" data-testid="instalment"><CountUp value={result.payment} format={(n) => formatZAR(n, true)} /></p>
+        <p className="mt-1 text-sm text-white/70">{t('results.basis', { months, rate: result.rate })}</p>
       </div>
 
       <dl className="grid grid-cols-2 gap-3">
-        <Stat label={t('results.total')} value={formatZAR(quote.totalRepayable)} />
-        <Stat label={t('results.interest')} value={formatZAR(quote.totalInterest)} />
-        <Stat label={t('results.fees')} value={formatZAR(quote.totalFees)} />
-        <Stat label={t('results.dti')} value={`${Math.round(a.dti * 100)}%`} />
+        <Stat label={t('results.total')} value={formatZAR(result.total, true)} />
+        <Stat label={t('results.interest')} value={formatZAR(result.interest, true)} />
+        <Stat label={t('results.rate')} value={`${result.rate}%`} />
+        <Stat label={t('results.dti')} value={`${result.dti}%`} />
       </dl>
 
-      <VerdictNotice verdict={a.verdict} />
-      <UsageSummary verdict={a.verdict} disposable={a.disposable} usage={a.usage} remaining={a.remaining} />
-      <MaxLoanNote verdict={a.verdict} max={max} months={months} />
+      <VerdictNotice verdict={result.verdict} />
+      <UsageSummary verdict={result.verdict} disposable={result.disposable} usage={result.usage} remaining={result.remaining} />
+      <MaxLoanNote verdict={result.verdict} max={result.max} months={months} />
       <p className="text-xs text-muted-foreground">{t('results.indicative')}</p>
     </StepShell>
   );

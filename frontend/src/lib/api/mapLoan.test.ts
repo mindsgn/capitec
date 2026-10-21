@@ -1,7 +1,7 @@
 import { boundsForLoan, mapEligibilityRequest, mapRateRequest, PRODUCT_BY_LOAN } from '@/lib/api/mapLoan';
 import { LOAN_TYPES } from '@/lib/loans';
 import { initialState, type SimState } from '@/lib/state';
-import { LOAN_PRODUCTS, VALIDATION_RULES } from '@/mocks/loansApi';
+import { LOAN_PRODUCTS } from '@/mocks/loansApi';
 
 function specState(patch?: Partial<SimState>): SimState {
   return {
@@ -31,12 +31,25 @@ describe('mapEligibilityRequest', () => {
     });
   });
 
-  it('omits a blank credit score and skips home loans', () => {
+  it('omits a blank credit score', () => {
     const blank = specState();
     blank.elig = { ...blank.elig, creditScore: null };
     const body = mapEligibilityRequest(blank);
     expect(body?.financialInfo).not.toHaveProperty('creditScore');
-    expect(mapEligibilityRequest({ ...blank, loanType: 'home' })).toBeNull();
+  });
+
+  it('sends a home loan to the home product', () => {
+    const home = specState({
+      loanType: 'home',
+      loan: { amount: 1000000, months: 240 },
+      elig: { ...specState().elig, loanPurpose: 'home_purchase' },
+    });
+    expect(mapEligibilityRequest(home)?.loanDetails).toEqual({
+      requestedAmount: 1000000,
+      loanTerm: 240,
+      loanPurpose: 'home_purchase',
+    });
+    expect(mapRateRequest(home)).toMatchObject({ loanType: 'home_loan', loanAmount: 1000000, loanTerm: 240 });
   });
 });
 
@@ -48,16 +61,14 @@ describe('product mapping', () => {
     expect(PRODUCT_BY_LOAN.education).toEqual({ productId: 'personal_loan', purpose: 'education' });
     expect(PRODUCT_BY_LOAN.medical).toEqual({ productId: 'personal_loan', purpose: 'medical' });
     expect(PRODUCT_BY_LOAN.vehicle).toEqual({ productId: 'vehicle_loan', purpose: 'used_vehicle' });
-    expect(PRODUCT_BY_LOAN.home).toBeNull();
+    expect(PRODUCT_BY_LOAN.home).toEqual({ productId: 'home_loan', purpose: 'home_purchase' });
 
     for (const id of LOAN_TYPES) {
       const mapped = PRODUCT_BY_LOAN[id];
-      const state = specState({ loanType: id, elig: { ...specState().elig, loanPurpose: mapped?.purpose ?? null } });
-      if (!mapped) {
-        expect(mapRateRequest(state)).toBeNull();
-      } else {
-        expect(mapRateRequest(state)).toMatchObject({ loanType: mapped.productId, creditScore: 650 });
-      }
+      expect(LOAN_PRODUCTS.some((product) => product.id === mapped.productId && product.purposes.includes(mapped.purpose))).toBe(true);
+      const state = specState({ loanType: id, elig: { ...specState().elig, loanPurpose: mapped.purpose } });
+      expect(mapRateRequest(state)).toMatchObject({ loanType: mapped.productId, creditScore: 650 });
+      expect(mapEligibilityRequest(state)?.loanDetails.loanPurpose).toBe(mapped.purpose);
     }
   });
 
@@ -67,12 +78,14 @@ describe('product mapping', () => {
     expect(mapRateRequest(state)?.creditScore).toBe(650);
   });
 
-  it('clamps personal loans to the validation rules and vehicles to the product', () => {
-    const personal = boundsForLoan('personal', VALIDATION_RULES, LOAN_PRODUCTS);
+  it('uses each lending product for amount and term limits', () => {
+    const personal = boundsForLoan('personal', LOAN_PRODUCTS);
     expect(personal).toEqual({ minAmount: 5000, maxAmount: 300000, minTerm: 6, maxTerm: 60 });
-    expect(boundsForLoan('education', VALIDATION_RULES, LOAN_PRODUCTS).maxTerm).toBe(60);
-    expect(boundsForLoan('vehicle', VALIDATION_RULES, LOAN_PRODUCTS)).toEqual({ minAmount: 50000, maxAmount: 1500000, minTerm: 12, maxTerm: 72 });
-    expect(boundsForLoan('home', VALIDATION_RULES, LOAN_PRODUCTS).maxAmount).toBe(5000000);
-    expect(boundsForLoan('home', VALIDATION_RULES, LOAN_PRODUCTS).maxTerm).toBe(360);
+    expect(boundsForLoan('education', LOAN_PRODUCTS)).toEqual(personal);
+    expect(boundsForLoan('medical', LOAN_PRODUCTS)).toEqual(personal);
+    expect(boundsForLoan('homeImprovement', LOAN_PRODUCTS)).toEqual(personal);
+    expect(boundsForLoan('multiIncome', LOAN_PRODUCTS)).toEqual(personal);
+    expect(boundsForLoan('vehicle', LOAN_PRODUCTS)).toEqual({ minAmount: 50000, maxAmount: 1500000, minTerm: 12, maxTerm: 72 });
+    expect(boundsForLoan('home', LOAN_PRODUCTS)).toEqual({ minAmount: 300000, maxAmount: 5000000, minTerm: 60, maxTerm: 360 });
   });
 });
