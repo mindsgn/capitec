@@ -6,6 +6,8 @@ import { LoanDetailsStep } from '@/components/steps/Affordability';
 import '@/i18n';
 import { useSim } from '@/state/SimulatorContext';
 import { initialState, type SimState } from '@/lib/state';
+import { useLoanApi } from '@/state/loanApiStore';
+import { LOAN_PRODUCTS, VALIDATION_RULES } from '@/mocks/loansApi';
 import type { Flow } from '@/components/steps/types';
 
 jest.mock('@/state/SimulatorContext', () => ({ useSim: jest.fn() }));
@@ -30,7 +32,10 @@ function renderStep(state: SimState) {
 }
 
 describe('LoanDetailsStep', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useLoanApi.setState({ status: 'ready', rules: VALIDATION_RULES, products: LOAN_PRODUCTS });
+  });
 
   test('renders nothing until a loan type is chosen', () => {
     const { container } = renderStep({ ...baseState, loanType: null });

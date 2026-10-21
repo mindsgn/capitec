@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import i18n from '@/i18n';
+import { boundsForLoan, PRODUCT_BY_LOAN } from '@/lib/api/mapLoan';
 import { LOAN_MAP, type LoanTypeId } from '@/lib/loans';
 import { initialState, type SimState } from '@/lib/state';
 import { clearState, loadState, saveState } from '@/lib/storage';
+import { useLoanApi } from '@/state/loanApiStore';
 
 interface Ctx {
   state: SimState;
@@ -30,16 +32,25 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
 
   const selectLoanType = useCallback((id: LoanTypeId) => {
     const c = LOAN_MAP[id];
+    const api = useLoanApi.getState();
+    let amount = c.defaultAmount;
+    let months = c.defaultTerm;
+    if (api.rules && api.products) {
+      const limits = boundsForLoan(id, api.rules, api.products);
+      amount = Math.min(limits.maxAmount, Math.max(limits.minAmount, amount));
+      months = Math.min(limits.maxTerm, Math.max(limits.minTerm, months));
+    }
+    api.clearDecision();
     setState((s) => s.loanType === id ? s : {
       ...s,
       loanType: id,
-      loan: { amount: c.defaultAmount, months: c.defaultTerm },
-      elig: { ...initialState.elig },
+      loan: { amount, months },
+      elig: { ...initialState.elig, loanPurpose: PRODUCT_BY_LOAN[id]?.purpose ?? null },
       submission: null,
     });
   }, []);
 
-  const reset = useCallback(() => { clearState(); setState(initialState); }, []);
+  const reset = useCallback(() => { clearState(); useLoanApi.getState().clearDecision(); setState(initialState); }, []);
 
   const value = useMemo<Ctx>(() => ({
     state, update, selectLoanType, reset,

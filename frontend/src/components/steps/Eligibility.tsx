@@ -1,40 +1,86 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CheckCircle2, Circle, FileText, Loader2, RefreshCw, Trash2, UploadCloud } from 'lucide-react';
 import { NumberField } from '@/components/NumberField';
+import { RulesGate } from '@/components/RulesGate';
+import { SelectField } from '@/components/SelectField';
 import { StepShell } from '@/components/StepShell';
 import { YesNo } from '@/components/YesNo';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { EMPLOYMENT_STATUSES, LOAN_PURPOSES, type EmploymentStatus, type LoanProduct, type LoanPurpose, type ValidationRules } from '@/lib/api/contracts';
+import { hasApiProduct, mapEligibilityRequest, mapRateRequest, purposesFor } from '@/lib/api/mapLoan';
 import { simulateLoan } from '@/lib/calc';
 import { asksMaritalQuestion, asksSalaryQuestion, docsFor, LOAN_MAP } from '@/lib/loans';
 import { basicsSchema, translateIssue, validate } from '@/lib/schemas';
 import { makeReference, simulateSubmit, simulateUpload, validateFile } from '@/lib/upload';
 import { cn, formatBytes, formatZAR } from '@/lib/utils';
 import { useSim } from '@/state/SimulatorContext';
+import { useLoanApi } from '@/state/loanApiStore';
 import type { Flow } from './types';
 
-export function BasicsStep({ flow }: { flow: Flow }) {
+const asStatus = (value: string): EmploymentStatus | null => EMPLOYMENT_STATUSES.find((item) => item === value) ?? null;
+const asPurpose = (value: string): LoanPurpose | null => LOAN_PURPOSES.find((item) => item === value) ?? null;
+
+function BasicsFields({ flow, rules, products }: { flow: Flow; rules: ValidationRules; products: LoanProduct[] }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
   if (!state.loanType) return null;
   const cfg = LOAN_MAP[state.loanType];
   const askSalary = asksSalaryQuestion(cfg);
   const askMarital = asksMaritalQuestion(cfg);
-  const { age, confirmed, salaryIntoCapitec, married } = state.elig;
-  const errors = validate(basicsSchema(cfg, { askSalary, askMarital }), { age, confirmed, salaryIntoCapitec, married });
+  const purposes = purposesFor(state.loanType, products);
+  const { age, confirmed, salaryIntoCapitec, married, employmentStatus, employmentDuration, creditScore, loanPurpose } = state.elig;
+  const errors = validate(basicsSchema(cfg, { askSalary, askMarital }, rules, purposes), {
+    age, confirmed, salaryIntoCapitec, married, employmentStatus, employmentDuration, creditScore, loanPurpose,
+  });
   const patch = (p: Partial<typeof state.elig>) => update((s) => ({ ...s, elig: { ...s.elig, ...p } }));
   const toggle = (id: string, on: boolean) => patch({ confirmed: on ? Array.from(new Set([...confirmed, id])) : confirmed.filter((c) => c !== id) });
+  const err = (key: string) => (errors[key] ? translateIssue(t, errors[key]) : undefined);
+  const ageMin = Math.max(cfg.minAge, rules.personalInfo.age.min ?? cfg.minAge);
+  const ageMax = Math.min(cfg.maxAge, rules.personalInfo.age.max ?? cfg.maxAge);
 
   return (
     <StepShell title={t('elig.basics.title')} description={t('elig.basics.desc', { loan: t(`loans.${cfg.id}.name`).toLowerCase() })} onBack={flow.back} onNext={flow.next} nextDisabled={Object.keys(errors).length > 0}>
       <NumberField
         id="age" label={t('fields.age')} prefix="" suffix={t('common.years')} placeholder="30"
-        hint={cfg.maxAge < 100 ? t('fields.ageHintBand', { min: cfg.minAge, max: cfg.maxAge }) : t('fields.ageHintMin', { min: cfg.minAge })}
-        value={age} onChange={(v) => patch({ age: v })} error={errors.age ? translateIssue(t, errors.age) : undefined}
+        hint={t('fields.ageHintBand', { min: ageMin, max: ageMax })}
+        value={age} onChange={(v) => patch({ age: v })} error={err('age')}
       />
+      <SelectField
+        id="employmentStatus"
+        label={t('fields.employmentStatus')}
+        placeholder={t('common.choose')}
+        hint={rules.personalInfo.employmentStatus.errorMessage}
+        value={employmentStatus}
+        options={rules.personalInfo.employmentStatus.options.map((value) => ({ value, label: t(`employment.${value}`, { defaultValue: value }) }))}
+        onChange={(value) => patch({ employmentStatus: asStatus(value) })}
+        error={err('employmentStatus')}
+      />
+      <NumberField
+        id="employmentDuration" label={t('fields.employmentDuration')} prefix="" suffix={t('fields.months')} placeholder="12"
+        hint={rules.personalInfo.employmentDuration.errorMessage}
+        value={employmentDuration} onChange={(v) => patch({ employmentDuration: v })} error={err('employmentDuration')}
+      />
+      <NumberField
+        id="creditScore" label={`${t('fields.creditScore')} (${t('common.optional')})`} prefix="" placeholder="650"
+        hint={rules.financialInfo.creditScore.errorMessage}
+        value={creditScore} onChange={(v) => patch({ creditScore: v })} error={err('creditScore')}
+      />
+      {purposes.length > 0 && (
+        <SelectField
+          id="loanPurpose"
+          label={t('fields.loanPurpose')}
+          placeholder={t('common.choose')}
+          hint={t('v.purpose')}
+          value={loanPurpose}
+          options={purposes.map((value) => ({ value, label: t(`purpose.${value}`, { defaultValue: value }) }))}
+          onChange={(value) => patch({ loanPurpose: asPurpose(value) })}
+          error={err('loanPurpose')}
+        />
+      )}
       {askSalary && <YesNo id="salaryIntoCapitec" label={t('elig.basics.salary')} value={salaryIntoCapitec} onChange={(v) => patch({ salaryIntoCapitec: v })} />}
       {askMarital && <YesNo id="married" label={t('elig.basics.married')} value={married} onChange={(v) => patch({ married: v })} />}
       <fieldset className="space-y-3">
@@ -47,6 +93,104 @@ export function BasicsStep({ flow }: { flow: Flow }) {
         ))}
       </fieldset>
       <p className="text-xs text-muted-foreground">{t('elig.basics.note')}</p>
+    </StepShell>
+  );
+}
+
+export function BasicsStep({ flow }: { flow: Flow }) {
+  const { t } = useTranslation();
+  const { state } = useSim();
+  if (!state.loanType) return null;
+  return (
+    <RulesGate title={t('elig.basics.title')} description={t('elig.basics.desc', { loan: t(`loans.${state.loanType}.name`).toLowerCase() })} onBack={flow.back}>
+      {(rules, products) => <BasicsFields flow={flow} rules={rules} products={products} />}
+    </RulesGate>
+  );
+}
+
+export function DecisionStep({ flow }: { flow: Flow }) {
+  const { t } = useTranslation();
+  const { state } = useSim();
+  const runDecision = useLoanApi((s) => s.runDecision);
+  const status = useLoanApi((s) => s.decisionStatus);
+  const eligibility = useLoanApi((s) => s.eligibility);
+  const rate = useLoanApi((s) => s.rate);
+  const decisionError = useLoanApi((s) => s.decisionError);
+
+  useEffect(() => {
+    const request = mapEligibilityRequest(state);
+    const rateRequest = mapRateRequest(state);
+    if (!request || !rateRequest) return;
+    void runDecision(request, rateRequest);
+  }, [state, runDecision]);
+
+  const ready = status === 'ready' && eligibility && rate;
+  const eligible = !!eligibility?.eligibilityResult.isEligible;
+  const retry = () => {
+    const request = mapEligibilityRequest(state);
+    const rateRequest = mapRateRequest(state);
+    if (request && rateRequest) void runDecision(request, rateRequest);
+  };
+
+  return (
+    <StepShell
+      title={t('elig.decision.title')}
+      description={t('elig.decision.desc')}
+      onBack={flow.back}
+      onNext={status === 'error' ? retry : flow.next}
+      nextLabel={status === 'error' ? t('flow.retry') : undefined}
+      nextDisabled={status === 'loading' || (status !== 'error' && (!ready || !eligible))}
+      busy={status === 'loading'}
+    >
+      {status === 'loading' && (
+        <p role="status" className="flex items-center gap-2 font-semibold"><Loader2 className="h-4 w-4 animate-spin" aria-hidden />{t('elig.decision.loading')}</p>
+      )}
+      {status === 'error' && <p role="alert" className="text-sm font-medium text-accent">{decisionError || t('elig.decision.error')}</p>}
+      {ready && (
+        <div className="space-y-4" data-testid="eligibility-decision" data-eligible={String(eligible)}>
+          <div className={cn('rounded-lg border p-4', eligible ? 'border-success/40 bg-success/10' : 'border-accent/40 bg-accent/10')} role="status">
+            <p className="font-bold">{eligible ? t('elig.decision.eligibleTitle') : t('elig.decision.ineligibleTitle')}</p>
+            <p className="mt-1 text-sm">{eligibility.eligibilityResult.decisionReason}</p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.likelihood')}</dt><dd className="font-bold" data-testid="approval-likelihood">{eligibility.eligibilityResult.approvalLikelihood}%</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.risk')}</dt><dd className="font-bold">{t(`elig.decision.riskLabel.${eligibility.eligibilityResult.riskCategory}`)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.recommended')}</dt><dd className="font-bold">{formatZAR(eligibility.recommendedLoan.recommendedAmount)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.max')}</dt><dd className="font-bold">{formatZAR(eligibility.recommendedLoan.maxAmount)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.rate')}</dt><dd className="font-bold">{rate.interestRate}%</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.instalment')}</dt><dd className="font-bold" data-testid="api-instalment">{formatZAR(rate.monthlyPayment, true)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.total')}</dt><dd className="font-bold">{formatZAR(rate.totalRepayment, true)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.score')}</dt><dd className="font-bold">{t(`elig.decision.scoreLabel.${eligibility.affordabilityAnalysis.affordabilityScore}`)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.disposable')}</dt><dd className="font-bold">{formatZAR(eligibility.affordabilityAnalysis.disposableIncome)}</dd></div>
+            <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.decision.dti')}</dt><dd className="font-bold">{eligibility.affordabilityAnalysis.debtToIncomeRatio}%</dd></div>
+          </dl>
+          <div className="max-h-80 overflow-auto rounded-lg border">
+            <table className="w-full text-left text-sm">
+              <caption className="px-3 py-2 text-left font-semibold">{t('elig.decision.schedule')}</caption>
+              <thead className="sticky top-0 bg-card text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">{t('elig.decision.month')}</th>
+                  <th className="px-3 py-2 font-semibold">{t('elig.decision.payment')}</th>
+                  <th className="px-3 py-2 font-semibold">{t('elig.decision.principal')}</th>
+                  <th className="px-3 py-2 font-semibold">{t('elig.decision.interest')}</th>
+                  <th className="px-3 py-2 font-semibold">{t('elig.decision.balance')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rate.paymentSchedule.map((row) => (
+                  <tr key={row.month} className="border-t">
+                    <td className="px-3 py-2">{row.month}</td>
+                    <td className="px-3 py-2">{formatZAR(row.payment, true)}</td>
+                    <td className="px-3 py-2">{formatZAR(row.principal, true)}</td>
+                    <td className="px-3 py-2">{formatZAR(row.interest, true)}</td>
+                    <td className="px-3 py-2">{formatZAR(row.balance, true)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </StepShell>
   );
 }
@@ -148,6 +292,7 @@ export function DocumentStep({ docId, position, total, flow }: { docId: string; 
 export function ReviewStep({ flow }: { flow: Flow }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
+  const decision = useLoanApi((s) => s.eligibility);
   const [busy, setBusy] = useState(false);
   if (!state.loanType) return null;
   const cfg = LOAN_MAP[state.loanType];
@@ -170,6 +315,12 @@ export function ReviewStep({ flow }: { flow: Flow }) {
 
   return (
     <StepShell title={t('elig.review.title')} description={t('elig.review.desc')} onBack={flow.back} onNext={submit} nextLabel={t('elig.review.submit')} nextVariant="accent" nextDisabled={missing.length > 0} busy={busy}>
+      {decision && (
+        <div className="rounded-lg border p-3 text-sm" data-testid="review-decision">
+          <p className="font-semibold">{decision.eligibilityResult.isEligible ? t('elig.decision.eligibleTitle') : t('elig.decision.ineligibleTitle')}</p>
+          <p className="text-muted-foreground">{decision.eligibilityResult.decisionReason}</p>
+        </div>
+      )}
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.review.loan')}</dt><dd className="font-bold">{t(`loans.${cfg.id}.name`)}</dd></div>
         <div className="rounded-lg border p-3"><dt className="text-muted-foreground">{t('elig.review.amount')}</dt><dd className="font-bold">{formatZAR(state.loan.amount ?? 0)}</dd></div>
@@ -182,7 +333,7 @@ export function ReviewStep({ flow }: { flow: Flow }) {
         <ul className="space-y-2" aria-label={t('elig.review.docs')}>
           {docs.map((d) => {
             const up = state.elig.docs[d.id];
-            const idx = docs.findIndex((x) => x.id === d.id) + 1;
+            const idx = (hasApiProduct(state.loanType) ? 2 : 1) + docs.findIndex((x) => x.id === d.id);
             return (
               <li key={d.id} className="flex items-center gap-3 rounded-lg border p-3">
                 {up ? <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden /> : <Circle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />}

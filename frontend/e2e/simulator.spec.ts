@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { completeAffordability, cont, pdf, pickPersonalLoan } from './helpers';
+import { completeAffordability, cont, fillPersonalBasics, passDecision, pdf, pickPersonalLoan } from './helpers';
 
 test.describe('landing page and SEO', () => {
   test('has title, description, canonical, JSON-LD and a working call to action', async ({ page }) => {
@@ -100,13 +100,12 @@ test.describe('eligibility flow', () => {
     await completeAffordability(page);
     await page.getByRole('button', { name: /continue to eligibility/i }).click();
 
-    // basics
+    // basics, then the simulated eligibility decision
     await expect(cont(page)).toBeDisabled();
-    await page.getByTestId('age').fill('30');
-    await page.getByTestId('salaryIntoCapitec-yes').click();
-    for (const box of await page.getByRole('checkbox').all()) await box.click();
+    await fillPersonalBasics(page);
     await expect(cont(page)).toBeEnabled();
     await cont(page).click();
+    await passDecision(page);
 
     // two documents (bank statement is not needed when salary is paid into Capitec)
     for (let i = 0; i < 2; i++) {
@@ -126,12 +125,11 @@ test.describe('eligibility flow', () => {
   test('adds a bank statement step when salary is not paid into Capitec', async ({ page }) => {
     await completeAffordability(page);
     await page.getByRole('button', { name: /continue to eligibility/i }).click();
-    await page.getByTestId('age').fill('30');
-    await page.getByTestId('salaryIntoCapitec-no').click();
-    for (const box of await page.getByRole('checkbox').all()) await box.click();
+    await fillPersonalBasics(page, { salary: 'no' });
     // wait for each document step to render before uploading, otherwise the input
     // of the previous step is still mounted and receives the file
     await cont(page).click();
+    await passDecision(page);
     await expect(page.getByRole('heading', { name: /south african id/i })).toBeVisible();
     await page.getByTestId('file-input').setInputFiles(pdf);
     await expect(page.getByTestId('uploaded-file')).toBeVisible();
@@ -146,12 +144,41 @@ test.describe('eligibility flow', () => {
   test('rejects unsupported files with an error toast', async ({ page }) => {
     await completeAffordability(page);
     await page.getByRole('button', { name: /continue to eligibility/i }).click();
-    await page.getByTestId('age').fill('30');
-    await page.getByTestId('salaryIntoCapitec-yes').click();
-    for (const box of await page.getByRole('checkbox').all()) await box.click();
+    await fillPersonalBasics(page);
     await cont(page).click();
+    await passDecision(page);
     await page.getByTestId('file-input').setInputFiles({ name: 'virus.exe', mimeType: 'application/x-msdownload', buffer: Buffer.from('x') });
     await expect(page.getByText(/only pdf, jpg or png/i)).toBeVisible();
+    await expect(cont(page)).toBeDisabled();
+  });
+
+  test('shows the simulated eligibility result before documents', async ({ page }) => {
+    await completeAffordability(page);
+    await page.getByRole('button', { name: /continue to eligibility/i }).click();
+    await fillPersonalBasics(page);
+    await cont(page).click();
+
+    await expect(page.getByTestId('eligibility-decision')).toHaveAttribute('data-eligible', 'true');
+    await expect(page.getByTestId('approval-likelihood')).toHaveText('85%');
+    await expect(page.getByTestId('api-instalment')).toContainText('669,07');
+    await cont(page).click();
+
+    for (let i = 0; i < 2; i++) {
+      await expect(cont(page)).toBeDisabled();
+      await page.getByTestId('file-input').setInputFiles(pdf);
+      await expect(page.getByTestId('uploaded-file')).toBeVisible();
+      await cont(page).click();
+    }
+    await page.getByRole('button', { name: /submit simulated application/i }).click();
+    await expect(page.getByTestId('reference')).toHaveText(/^LS-/);
+  });
+
+  test('blocks continue when the applicant is unemployed', async ({ page }) => {
+    await completeAffordability(page);
+    await page.getByRole('button', { name: /continue to eligibility/i }).click();
+    await fillPersonalBasics(page, { status: 'unemployed' });
+    await cont(page).click();
+    await expect(page.getByTestId('eligibility-decision')).toHaveAttribute('data-eligible', 'false');
     await expect(cont(page)).toBeDisabled();
   });
 });

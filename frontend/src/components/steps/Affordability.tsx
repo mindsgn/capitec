@@ -5,9 +5,12 @@ import { NumberField } from '@/components/NumberField';
 import { StepShell } from '@/components/StepShell';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { RulesGate } from '@/components/RulesGate';
+import { boundsForLoan, PRODUCT_BY_LOAN } from '@/lib/api/mapLoan';
+import type { LoanProduct, ValidationRules } from '@/lib/api/contracts';
 import { LOAN_MAP, LOANS, type LoanConfig, type LoanIcon } from '@/lib/loans';
 import { simulateLoan } from '@/lib/calc';
-import { expensesSchema, incomeSchema, loanDetailsSchema, translateIssue, validate } from '@/lib/schemas';
+import { expensesSchema, incomeSchemaFor, loanDetailsSchema, translateIssue, validate } from '@/lib/schemas';
 import { cn, formatZAR } from '@/lib/utils';
 import { useSim } from '@/state/SimulatorContext';
 import type { Flow } from './types';
@@ -46,10 +49,10 @@ export function LoanTypeStep({ flow }: { flow: Flow }) {
   );
 }
 
-export function IncomeStep({ flow }: { flow: Flow }) {
+function IncomeFields({ flow, minIncome, message }: { flow: Flow; minIncome: number; message: string }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
-  const errors = validate(incomeSchema, state.income);
+  const errors = validate(incomeSchemaFor(minIncome, message), state.income);
   const set = (k: 'grossIncome' | 'netIncome') => (v: number | null) => update((s) => ({ ...s, income: { ...s.income, [k]: v } }));
   const err = (k: string) => (errors[k] ? translateIssue(t, errors[k]) : undefined);
   return (
@@ -57,6 +60,15 @@ export function IncomeStep({ flow }: { flow: Flow }) {
       <NumberField id="grossIncome" label={t('fields.grossIncome')} hint={t('fields.grossIncomeHint')} value={state.income.grossIncome} onChange={set('grossIncome')} error={err('grossIncome')} />
       <NumberField id="netIncome" label={t('fields.netIncome')} hint={t('fields.netIncomeHint')} value={state.income.netIncome} onChange={set('netIncome')} error={err('netIncome')} />
     </StepShell>
+  );
+}
+
+export function IncomeStep({ flow }: { flow: Flow }) {
+  const { t } = useTranslation();
+  return (
+    <RulesGate title={t('steps.income.title')} description={t('steps.income.desc')} onBack={flow.back}>
+      {(rules) => <IncomeFields flow={flow} minIncome={rules.financialInfo.monthlyIncome.min ?? 0} message={rules.financialInfo.monthlyIncome.errorMessage} />}
+    </RulesGate>
   );
 }
 
@@ -149,13 +161,19 @@ function InstalmentPreview({ rate, quote }: { rate: number; quote: ReturnType<ty
   );
 }
 
-export function LoanDetailsStep({ flow }: { flow: Flow }) {
+function LoanDetailsForm({ flow, rules, products }: { flow: Flow; rules: ValidationRules; products: LoanProduct[] }) {
   const { t } = useTranslation();
   const { state, update } = useSim();
   if (!state.loanType) return null;
   const cfg = LOAN_MAP[state.loanType];
+  const limits = boundsForLoan(state.loanType, rules, products);
+  const view = { ...cfg, ...limits };
+  const personal = PRODUCT_BY_LOAN[state.loanType]?.productId === 'personal_loan';
+  const messages = personal
+    ? { amount: rules.loanDetails.requestedAmount.errorMessage, term: rules.loanDetails.loanTerm.errorMessage }
+    : undefined;
   const { amount, months } = state.loan;
-  const errors = validate(loanDetailsSchema(cfg), { amount, months });
+  const errors = validate(loanDetailsSchema(limits, messages), { amount, months });
   const valid = Object.keys(errors).length === 0;
   const quote = valid ? simulateLoan({ amount: amount!, months: months!, ratePct: cfg.rate }) : null;
   const setAmount = (v: number | null) => update((s) => ({ ...s, loan: { ...s.loan, amount: v } }));
@@ -163,9 +181,20 @@ export function LoanDetailsStep({ flow }: { flow: Flow }) {
 
   return (
     <StepShell title={t('steps.loanDetails.title', { loan: t(`loans.${cfg.id}.name`) })} description={t('steps.loanDetails.desc')} onBack={flow.back} onNext={flow.next} nextDisabled={!valid}>
-      <AmountField cfg={cfg} value={amount} error={errors.amount ? translateIssue(t, errors.amount) : undefined} onChange={setAmount} />
-      <TermField cfg={cfg} value={months} onChange={setMonths} />
+      <AmountField cfg={view} value={amount} error={errors.amount ? translateIssue(t, errors.amount) : undefined} onChange={setAmount} />
+      <TermField cfg={view} value={months} onChange={setMonths} />
       <InstalmentPreview rate={cfg.rate} quote={quote} />
     </StepShell>
+  );
+}
+
+export function LoanDetailsStep({ flow }: { flow: Flow }) {
+  const { t } = useTranslation();
+  const { state } = useSim();
+  if (!state.loanType) return null;
+  return (
+    <RulesGate title={t('steps.loanDetails.title', { loan: t(`loans.${state.loanType}.name`) })} description={t('steps.loanDetails.desc')} onBack={flow.back}>
+      {(rules, products) => <LoanDetailsForm flow={flow} rules={rules} products={products} />}
+    </RulesGate>
   );
 }

@@ -3,13 +3,13 @@ const en = {
   nav: { label: 'Main', home: 'Home', start: 'Start simulation', resume: 'Resume', skip: 'Skip to content' },
   footer: {
     disclaimer: 'Results are indicative only and are not an offer of credit. Rates, fees and limits are simplified, and approval depends on a full credit and affordability assessment.',
-    brandNote: 'Independent demo inspired by Capitec Bank. Not affiliated with or endorsed by Capitec. No data leaves your browser.',
+    brandNote: 'Independent demo inspired by Capitec Bank. Not affiliated with or endorsed by Capitec. Eligibility uses a simulated API on this site. Uploaded documents stay on your device.',
   },
   common: {
-    back: 'Back', continue: 'Continue', skip: 'Skip this document', optional: 'Optional', yes: 'Yes', no: 'No',
+    back: 'Back', continue: 'Continue', choose: 'Choose', skip: 'Skip this document', optional: 'Optional', yes: 'Yes', no: 'No',
     perMonth: 'per month', years: 'years', fillRequired: 'Complete the required fields to continue.',
   },
-  flow: { confirmReset: 'Start over? Your answers and uploaded document records will be cleared.', startOver: 'Start over', progress: 'Overall progress', stepOf: 'Step {{n}} of {{total}}' },
+  flow: { confirmReset: 'Start over? Your answers and uploaded document records will be cleared.', startOver: 'Start over', progress: 'Overall progress', stepOf: 'Step {{n}} of {{total}}', rulesLoading: 'Loading the lending rules', rulesError: 'We could not load the lending rules.', retry: 'Try again' },
   phase: { label: 'Phases', affordability: 'Affordability', eligibility: 'Eligibility' },
   seo: {
     home: { title: 'Loan Simulator | Check affordability and eligibility in minutes', desc: 'Estimate your monthly instalment, see whether a loan fits your budget, then walk through the documents you need. Personal, vehicle, home, education, medical and more.' },
@@ -18,7 +18,7 @@ const en = {
   },
   landing: {
     title: 'Know what you can afford before you apply',
-    subtitle: 'Work out your monthly instalment and affordability first. Then see exactly which documents you need to apply. It takes a few minutes and nothing is sent anywhere.',
+    subtitle: 'Work out your monthly instalment and affordability first. Then see exactly which documents you need to apply. It takes a few minutes, and your documents stay on this device.',
     cta: 'Start simulation', resume: 'Resume your simulation', browse: 'Browse loan types',
     card: { label: 'Example instalment', caption: 'About 38% of the disposable income in this example' },
     how: {
@@ -32,7 +32,7 @@ const en = {
   },
   faq: {
     one: { q: 'Does this guarantee my loan will be approved?', a: 'No. Meeting the basic requirements does not guarantee approval. The lender still runs credit and affordability assessments before deciding.' },
-    two: { q: 'Is my information sent anywhere?', a: 'No. There is no backend. Your answers stay in your browser so you can refresh without losing your place, and uploaded documents are only simulated.' },
+    two: { q: 'Is my information sent anywhere?', a: 'Your answers stay in this browser so you can refresh without losing your place. The eligibility check calls a simulated API on this site, and uploaded documents still never leave your device.' },
     three: { q: 'Why are affordability and eligibility separate?', a: 'Affordability is about the numbers: can your budget carry the instalment. Eligibility is about the rules and paperwork: age, ID, income proof and other documents.' },
     four: { q: 'Are the interest rates and fees exact?', a: 'They are indicative. Your real rate, term and amount are set by the lender after assessing you, so treat the results as a planning guide.' },
   },
@@ -62,6 +62,8 @@ const en = {
     amount: 'Loan amount', amountHint: 'Between {{min}} and {{max}}.',
     term: 'Repayment term', termValue: '{{months}} months', termHint: 'Choose between {{min}} and {{max}} months.',
     age: 'Your age', ageHintMin: 'You must be at least {{min}} years old.', ageHintBand: 'You must be between {{min}} and {{max}} years old.',
+    employmentStatus: 'Employment status', employmentDuration: 'Time with your current employer', months: 'months',
+    creditScore: 'Credit score', loanPurpose: 'What is the loan for?',
   },
   results: {
     emptyTitle: 'We need a few more details', emptyBody: 'Some of your answers are missing, so we cannot calculate your result yet.', emptyAction: 'Go back to the start',
@@ -79,7 +81,7 @@ const en = {
   },
   elig: {
     basics: {
-      title: 'Check the basic requirements', desc: 'Confirm each requirement for a {{loan}}. Next you will upload your documents.',
+      title: 'Check the basic requirements', desc: 'Confirm each requirement for a {{loan}}.',
       salary: 'Is your salary paid into a Capitec account?', married: 'Are you married or do you have an antenuptial contract?',
       confirm: 'I confirm that', note: 'Meeting the basic requirements does not guarantee approval. Credit and affordability assessments still apply.',
     },
@@ -87,6 +89,22 @@ const en = {
       title: 'Review and submit', desc: 'Check your summary and documents. This is a simulation, so submitting only creates a reference number.', submit: 'Submit simulated application',
       loan: 'Loan', amount: 'Amount', term: 'Term', docs: 'Documents', empty: 'No documents are required for your answers.', skipped: 'Skipped (optional)', missing: 'Still needed', add: 'Add',
     },
+    decision: {
+      title: 'Your eligibility result', desc: 'This check uses a simulated lending API. It is not an offer of credit.',
+      loading: 'Checking eligibility', error: 'We could not complete the eligibility check.',
+      eligibleTitle: 'You look eligible', ineligibleTitle: 'Not eligible on these terms',
+      likelihood: 'Approval likelihood', risk: 'Risk category', recommended: 'Recommended amount', max: 'Maximum amount',
+      rate: 'Interest rate', instalment: 'Monthly payment', total: 'Total repayment', score: 'Affordability',
+      disposable: 'Disposable income', dti: 'Debt to income', schedule: 'Payment schedule',
+      month: 'Month', payment: 'Payment', principal: 'Principal', interest: 'Interest', balance: 'Balance',
+      riskLabel: { low: 'Low', medium: 'Medium', high: 'High' },
+      scoreLabel: { good: 'Good', fair: 'Fair', poor: 'Poor' },
+    },
+  },
+  employment: { employed: 'Employed', self_employed: 'Self-employed', unemployed: 'Unemployed', retired: 'Retired' },
+  purpose: {
+    debt_consolidation: 'Debt consolidation', home_improvement: 'Home improvement', education: 'Education', medical: 'Medical', other: 'Other',
+    new_vehicle: 'New vehicle', used_vehicle: 'Used vehicle',
   },
   req: {
     saId: 'I have a valid South African ID.', validId: 'I have valid identification and meet the lender\'s minimum age.',
@@ -132,7 +150,7 @@ const en = {
   },
   v: {
     required: 'Enter a number.', netAboveGross: 'Net income cannot be higher than gross income.', range: 'Enter an amount between {{a0}} and {{a1}}.',
-    months: 'Choose a term between {{a0}} and {{a1}} months.', age: 'Your age must be between {{a0}} and {{a1}}.', choose: 'Choose yes or no.', confirmAll: 'Confirm every requirement to continue.',
+    months: 'Choose a term between {{a0}} and {{a1}} months.', age: 'Your age must be between {{a0}} and {{a1}}.', choose: 'Choose yes or no.', purpose: 'Choose what the loan is for.', confirmAll: 'Confirm every requirement to continue.',
     fileType: 'Only PDF, JPG or PNG files are accepted.', fileSize: 'That file is larger than 5 MB.', fileEmpty: 'That file is empty.',
   },
   error: { title: 'Something went wrong', body: 'The page hit an unexpected problem. Reload to try again, or clear your saved progress.', reload: 'Reload', reset: 'Clear progress' },

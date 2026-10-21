@@ -9,6 +9,20 @@ export async function pickPersonalLoan(page: Page) {
   await cont(page).click();
 }
 
+export async function fillPersonalBasics(page: Page, opts?: { status?: string; salary?: 'yes' | 'no' }) {
+  await page.getByTestId('age').fill('35');
+  await page.getByTestId('employmentStatus').selectOption(opts?.status ?? 'employed');
+  await page.getByTestId('employmentDuration').fill('24');
+  await page.getByTestId('loanPurpose').selectOption('other');
+  await page.getByTestId(`salaryIntoCapitec-${opts?.salary ?? 'yes'}`).click();
+  for (const box of await page.getByRole('checkbox').all()) await box.click();
+}
+
+export async function passDecision(page: Page) {
+  await expect(page.getByTestId('eligibility-decision')).toHaveAttribute('data-eligible', 'true');
+  await cont(page).click();
+}
+
 export async function completeAffordability(page: Page) {
   await pickPersonalLoan(page);
   await page.getByTestId('grossIncome').fill('30000');

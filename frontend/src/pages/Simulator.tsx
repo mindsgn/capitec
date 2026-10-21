@@ -9,7 +9,7 @@ import { Seo } from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ExpensesStep, IncomeStep, LoanDetailsStep, LoanTypeStep } from '@/components/steps/Affordability';
-import { BasicsStep, DocumentStep, ReviewStep } from '@/components/steps/Eligibility';
+import { BasicsStep, DecisionStep, DocumentStep, ReviewStep } from '@/components/steps/Eligibility';
 import { ResultsStep } from '@/components/steps/Results';
 import { SubmittedView } from '@/components/steps/Submitted';
 import type { Flow } from '@/components/steps/types';
@@ -18,14 +18,18 @@ import { LOAN_TYPES, type LoanTypeId } from '@/lib/loans';
 import { AFFORDABILITY_STEPS } from '@/lib/state';
 import { cn } from '@/lib/utils';
 import { useSim } from '@/state/SimulatorContext';
+import { useLoanApi } from '@/state/loanApiStore';
 
 const LAST_AFFORDABILITY = AFFORDABILITY_STEPS.length - 1;
 
 export default function Simulator() {
   const { t } = useTranslation();
   const { state, update, selectLoanType, reset } = useSim();
+  const loadReference = useLoanApi((s) => s.loadReference);
   const reduce = useReducedMotion();
   const [params, setParams] = useSearchParams();
+
+  useEffect(() => { void loadReference(); }, [loadReference]);
 
   // Deep link from the landing page: /simulator?type=personal
   useEffect(() => {
@@ -85,8 +89,13 @@ export default function Simulator() {
       case 'loanDetails': return <LoanDetailsStep flow={flow} />;
       case 'results': return <ResultsStep flow={flow} />;
       case 'basics': return <BasicsStep flow={flow} />;
+      case 'decision': return <DecisionStep flow={flow} />;
       case 'review': return <ReviewStep flow={flow} />;
-      default: return <DocumentStep key={stepId} docId={stepId.replace('doc:', '')} position={idx} total={ids.length - 2} flow={flow} />;
+      default: {
+        if (!stepId.startsWith('doc:')) return null;
+        const docSteps = ids.filter((id) => id.startsWith('doc:'));
+        return <DocumentStep key={stepId} docId={stepId.replace('doc:', '')} position={docSteps.indexOf(stepId) + 1} total={docSteps.length} flow={flow} />;
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import { basicsSchema, expensesSchema, incomeSchema, loanDetailsSchema, translateIssue, validate } from './schemas';
 import { LOAN_MAP, docsFor } from './loans';
+import { VALIDATION_RULES } from '@/mocks/loansApi';
 
 describe('income', () => {
   it('requires values', () => {
@@ -30,17 +31,26 @@ describe('loan details', () => {
 });
 
 describe('basics', () => {
+  const employment = { employmentStatus: 'employed' as const, employmentDuration: 12, creditScore: null, loanPurpose: null };
   const c = LOAN_MAP.home;
-  const schema = basicsSchema(c, { askSalary: false, askMarital: true });
+  const schema = basicsSchema(c, { askSalary: false, askMarital: true }, VALIDATION_RULES, []);
   it('applies the home loan age band of 18 to 60', () => {
-    const ok = { age: 40, confirmed: c.requirements, salaryIntoCapitec: null, married: false };
+    const ok = { age: 40, confirmed: c.requirements, salaryIntoCapitec: null, married: false, ...employment };
     expect(validate(schema, ok)).toEqual({});
     expect(validate(schema, { ...ok, age: 61 })).toHaveProperty('age');
     expect(validate(schema, { ...ok, age: 17 })).toHaveProperty('age');
   });
+  it('tightens other loans to the rules age maximum of 65', () => {
+    const personal = LOAN_MAP.personal;
+    const personalSchema = basicsSchema(personal, { askSalary: true, askMarital: false }, VALIDATION_RULES, ['other']);
+    const ok = { age: 65, confirmed: personal.requirements, salaryIntoCapitec: true, married: null, ...employment, loanPurpose: 'other' };
+    expect(validate(personalSchema, ok)).toEqual({});
+    expect(validate(personalSchema, { ...ok, age: 66 })).toHaveProperty('age');
+    expect(validate(personalSchema, { ...ok, creditScore: 299 })).toHaveProperty('creditScore');
+  });
   it('requires every requirement to be confirmed and the marital answer', () => {
-    expect(validate(schema, { age: 40, confirmed: [], salaryIntoCapitec: null, married: false })).toHaveProperty('confirmed');
-    expect(validate(schema, { age: 40, confirmed: c.requirements, salaryIntoCapitec: null, married: null })).toHaveProperty('married');
+    expect(validate(schema, { age: 40, confirmed: [], salaryIntoCapitec: null, married: false, ...employment })).toHaveProperty('confirmed');
+    expect(validate(schema, { age: 40, confirmed: c.requirements, salaryIntoCapitec: null, married: null, ...employment })).toHaveProperty('married');
   });
 });
 

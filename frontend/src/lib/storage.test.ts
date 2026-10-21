@@ -15,6 +15,13 @@ describe('storage', () => {
   it('returns the initial state when nothing is saved', () => {
     expect(loadState(fakeStorage())).toEqual({ state: initialState, error: false });
   });
+  it('fills new eligibility fields when an older save omits them', () => {
+    const { employmentStatus: _status, employmentDuration: _duration, creditScore: _score, loanPurpose: _purpose, ...oldElig } = initialState.elig;
+    const old = { ...initialState, elig: oldElig };
+    const loaded = loadState(fakeStorage({ [STORAGE_KEY]: JSON.stringify(old) }));
+    expect(loaded.error).toBe(false);
+    expect(loaded.state.elig).toEqual(initialState.elig);
+  });
   it('round-trips state', () => {
     const s = fakeStorage();
     const next = { ...initialState, phase: 'eligibility' as const, step: 2, loanType: 'personal' as const };

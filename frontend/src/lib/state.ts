@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EMPLOYMENT_STATUSES, LOAN_PURPOSES } from './api/contracts';
 import { LOAN_TYPES } from './loans';
 
 const n = z.number().nullable();
@@ -19,6 +20,10 @@ export const stateSchema = z.object({
     salaryIntoCapitec: z.boolean().nullable(),
     married: z.boolean().nullable(),
     docs: z.record(docMetaSchema),
+    employmentStatus: z.enum(EMPLOYMENT_STATUSES).nullable().default(null),
+    employmentDuration: n.default(null),
+    creditScore: n.default(null),
+    loanPurpose: z.enum(LOAN_PURPOSES).nullable().default(null),
   }),
   submission: z.object({ reference: z.string(), at: z.string() }).nullable(),
 });
@@ -33,7 +38,7 @@ export const initialState: SimState = {
   income: { grossIncome: null, netIncome: null },
   expenses: { housing: null, transport: null, living: null, other: null, existingDebt: null },
   loan: { amount: null, months: null },
-  elig: { age: null, confirmed: [], salaryIntoCapitec: null, married: null, docs: {} },
+  elig: { age: null, confirmed: [], salaryIntoCapitec: null, married: null, docs: {}, employmentStatus: null, employmentDuration: null, creditScore: null, loanPurpose: null },
   submission: null,
 };
 
