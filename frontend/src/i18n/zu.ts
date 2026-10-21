@@ -1,6 +1,6 @@
 const zu = {
   brand: { name: 'Capitec' },
-  nav: { label: 'Okuyinhloko', home: 'Ikhaya', start: 'Qala ukulingisa', resume: 'Qhubeka', skip: 'Yeqela kokuqukethwe' },
+  nav: { label: 'Okuyinhloko', home: 'Ikhaya', start: 'Qala ukulingisa', resume: 'Qhubeka', skip: 'Yeqela kokuqukethwe', language: 'Ulimi' },
   footer: {
     disclaimer: 'Imiphumela iyizinkomba kuphela futhi ayisona isithembiso sesikweletu. Amanani nemikhawulo kuvela emithethweni yokubolekisa elingisiwe, futhi ukugunyazwa kuncike ekuhlolweni okuphelele kwesikweletu nokuthi uyakwazi yini ukukhokha.',
     brandNote: 'Lolu wuhlelo lokubonisa oluzimele olugqugquzelwe yiCapitec Bank. Aluhlangene neCapitec futhi aluvunyelwe yiyo. Ukuhlolwa kokufaneleka kusebenzisa i-API elingisiwe kule ngosi. Amadokhumenti alayishiwe ahlala kudivayisi yakho.',

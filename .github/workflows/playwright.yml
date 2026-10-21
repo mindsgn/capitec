@@ -170,9 +170,11 @@ jobs:
           push: true
           provenance: false
           sbom: false
-          tags: ${{ steps.image.outputs.ref }}:${{ steps.image.outputs.sha }}
+          tags: |
+            ${{ steps.image.outputs.ref }}:${{ steps.image.outputs.sha }}
+            ${{ steps.image.outputs.ref }}:latest
           build-args: |
-            VITE_SITE_URL=${{ vars.VITE_SITE_URL || 'https://loan-simulator.example.com' }}
+            VITE_SITE_URL=${{ vars.VITE_SITE_URL || 'http://localhost:3000' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ steps.image.outputs.sha }}
@@ -180,10 +182,12 @@ jobs:
       - name: Deploy digest
         env:
           TAG: ${{ steps.image.outputs.ref }}:${{ steps.image.outputs.sha }}
+          LATEST: ${{ steps.image.outputs.ref }}:latest
           DIGEST: ${{ steps.image.outputs.ref }}@${{ steps.build.outputs.digest }}
         run: |
           echo "Deploying ${DIGEST}"
           echo "Tag ${TAG}"
+          echo "Latest ${LATEST}"
           echo "Publish port 3000. Health check: GET /api/loans/products."
           {
             echo "### Production"
@@ -191,6 +195,7 @@ jobs:
             echo "Deploy \`${DIGEST}\`."
             echo ""
             echo "- Tag: \`${TAG}\`"
+            echo "- Latest: \`${LATEST}\`"
             echo "- Port: 3000"
             echo "- Health check: \`GET /api/loans/products\`"
             echo "- Site URL was inlined at build time from \`VITE_SITE_URL\`."

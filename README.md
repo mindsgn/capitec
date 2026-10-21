@@ -4,6 +4,14 @@ Independent demo of a loan affordability and eligibility flow. Estimate a monthl
 
 Answers stay in the browser. Uploaded documents stay on the device. Lending rules come from a simulated API served with the app. This project is not affiliated with or endorsed by Capitec Bank. Results are indicative and are not an offer of credit.
 
+## Try it
+
+The simulator is live at [https://capitec-loan-simulator.seni-tembe.workers.dev/](https://capitec-loan-simulator.seni-tembe.workers.dev/).
+
+![Walkthrough of the loan simulator, from the landing page through a submitted application](demo/walkthrough.gif)
+
+The same recording is available as a video file: [demo/walkthrough.mp4](demo/walkthrough.mp4).
+
 ## Prerequisites
 
 - [Git](https://git-scm.com/)
@@ -63,6 +71,39 @@ Set `VITE_SITE_URL` in `frontend/.env` before `yarn build`. Vite writes that val
 
 ## Docker
 
+### Published image
+
+A push to `main` publishes the production image to GitHub Container Registry. Pull `latest` and run it:
+
+```bash
+docker pull ghcr.io/mindsgn/loan-simulator:latest
+docker run --rm -p 3000:3000 ghcr.io/mindsgn/loan-simulator:latest
+```
+
+Open [http://localhost:3000](http://localhost:3000). A healthy container answers `GET /api/loans/products`.
+
+`latest` tracks `main`. Each build is also tagged with the full commit SHA, `ghcr.io/mindsgn/loan-simulator:<sha>`, so you can pin a known build or roll back to one.
+
+The published image is built with `VITE_SITE_URL=http://localhost:3000` unless the `VITE_SITE_URL` repository variable is set. Vite writes that origin into the app during the image build.
+
+Before anyone else can pull the image, the package has to be public. On GitHub, open the `loan-simulator` package, then **Package settings** and **Change visibility** to Public. That step is once per package.
+
+To hand someone the image without a registry, save it and send the file:
+
+```bash
+docker pull ghcr.io/mindsgn/loan-simulator:latest
+docker save ghcr.io/mindsgn/loan-simulator:latest | gzip > loan-simulator.tar.gz
+```
+
+They load it and run the same tag:
+
+```bash
+docker load < loan-simulator.tar.gz
+docker run --rm -p 3000:3000 ghcr.io/mindsgn/loan-simulator:latest
+```
+
+### Run from this repository
+
 Development, with source in `frontend/src` synced into the container:
 
 ```bash
@@ -71,13 +112,13 @@ docker compose up --build dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-Production image:
+Production image, built on this machine:
 
 ```bash
 docker compose up --build prod
 ```
 
-Open [http://localhost:3000](http://localhost:3000). A healthy container answers `GET /api/loans/products`.
+Open [http://localhost:3000](http://localhost:3000).
 
 The same production image without Compose:
 
@@ -86,7 +127,13 @@ docker build --build-arg VITE_SITE_URL=http://localhost:3000 -t loan-simulator .
 docker run --rm -p 3000:3000 loan-simulator
 ```
 
-Replace `VITE_SITE_URL` with the public origin when you build an image for a real host.
+Replace `VITE_SITE_URL` with the public origin when you build an image for a real host. To publish that build yourself:
+
+```bash
+docker tag loan-simulator ghcr.io/mindsgn/loan-simulator:latest
+docker login ghcr.io
+docker push ghcr.io/mindsgn/loan-simulator:latest
+```
 
 ## Tests
 
@@ -105,6 +152,12 @@ yarn e2e
 ```
 
 `yarn e2e --project=chromium` runs Chromium only. `yarn e2e:ui` opens the Playwright UI.
+
+Record a fresh walkthrough. Typing and selections are paced slowly so the recording is easy to follow. This needs [ffmpeg](https://ffmpeg.org/), and it writes `demo/walkthrough.mp4` and `demo/walkthrough.gif`:
+
+```bash
+yarn demo
+```
 
 ## Layout
 

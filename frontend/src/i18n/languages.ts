@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import af from './af';
 import en from './en';
+import zu from './zu';
 
 /**
  * UI languages. To add isiZulu or isiXhosa, create src/i18n/zu.ts or xh.ts
@@ -23,11 +24,12 @@ export const DEFAULT_LANGUAGE: LanguageCode = 'en';
 
 export const LANGUAGE_STORAGE_KEY = 'loan-simulator:lang';
 
-const translations = { en, af } satisfies Record<LanguageCode, typeof en>;
+const translations = { en, af, zu } satisfies Record<LanguageCode, typeof en>;
 
 export const resources = {
   en: { translation: translations.en },
   af: { translation: translations.af },
+  zu: { translation: translations.zu },
 };
 
 type Reader = Pick<Storage, 'getItem'>;

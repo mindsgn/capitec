@@ -19,6 +19,7 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps",
     "e2e:ui": "playwright test --ui",
+    "demo": "playwright test -c playwright.demo.config.ts && node scripts/export-demo.mjs",
     "deploy": "yarn run build && wrangler deploy"
   },
   "dependencies": {
