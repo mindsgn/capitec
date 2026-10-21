@@ -9,7 +9,7 @@ const en = {
     back: 'Back', continue: 'Continue', choose: 'Choose', skip: 'Skip this document', optional: 'Optional', yes: 'Yes', no: 'No',
     perMonth: 'per month', years: 'years', fillRequired: 'Complete the required fields to continue.',
   },
-  flow: { confirmReset: 'Start over? Your answers and uploaded document records will be cleared.', startOver: 'Start over', progress: 'Overall progress', stepOf: 'Step {{n}} of {{total}}', rulesLoading: 'Loading the lending rules', rulesError: 'We could not load the lending rules.', retry: 'Try again' },
+  flow: { confirmReset: 'Start over? Your answers and uploaded document records will be cleared.', startOver: 'Start over', progress: 'Overall progress', rulesLoading: 'Loading the lending rules', rulesError: 'We could not load the lending rules.', retry: 'Try again' },
   phase: { label: 'Phases', affordability: 'Affordability', eligibility: 'Eligibility' },
   seo: {
     home: { title: 'Loan Simulator | Check affordability and eligibility in minutes', desc: 'Estimate your monthly instalment, see whether a loan fits your budget, then walk through the documents you need. Personal, vehicle, home, education, medical and more.' },

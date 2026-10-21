@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_SITE_URL: http://localhost:3000
     ports:
       - "3000:3000"
     environment:
@@ -19,26 +21,13 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./src
+          path: ./frontend/src
           target: /app/src
           ignore:
             - node_modules/
         - action: rebuild
-          path: ./package.json
+          path: ./frontend/package.json
           target: /app/package.json
         - action: rebuild
-          path: ./vite.config.ts
+          path: ./frontend/vite.config.ts
           target: /app/vite.config.ts
-
-  web:
-    build: .
-    ports:
-      - "3000:3000"
-    volumes:
-     - .:/app
-     - ./node_modules:/app/node_modules
-    environment:
-      NODE_ENV: development
-    stdin_open: true
-    tty: true
-    command: npm start

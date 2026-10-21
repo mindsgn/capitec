@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Runs against a production build served by `vite preview`.
+ * Runs against the production Node server (`server/index.ts`), which serves `dist` and `/api/loans`.
  * Projects cover desktop Chrome, Firefox and Safari (WebKit) plus Android (Pixel) and iOS (iPhone) emulation.
+ * Pull requests launch Chromium only. The nightly workflow launches the other projects.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -14,10 +15,11 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: { baseURL: 'http://localhost:4173', trace: 'on-first-retry', screenshot: 'only-on-failure' },
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+    command: 'yarn build && node server-dist/index.js',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    env: { PORT: '4173' },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

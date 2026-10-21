@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { handleLoanApi } from './src/mocks/loansApi';
 
-/** Serves the loan mock on the dev server and on `vite preview` (used by Playwright). */
+/** Serves the loan mock on the Vite dev server. Production uses `server/index.ts`. */
 function loansApiPlugin(): Plugin {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     const urlPath = (req.url ?? '').split('?')[0] ?? '';

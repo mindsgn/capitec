@@ -3,6 +3,7 @@
 # =========================================
 frontend/node_modules/
 frontend/dist/
+frontend/server-dist/
 frontend/out/
 frontend/.tmp/
 frontend/.cache/
@@ -25,7 +26,6 @@ frontend/reports/
 # Environment and config files (sensitive)
 # =========================================
 *.env*
-!.env.production  # Allow production env file if needed
 *.log
 
 # =========================================

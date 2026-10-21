@@ -127,7 +127,6 @@ export default function Simulator() {
               </Button>
             </div>
             <Progress value={Math.round((index / total) * 100)} aria-label={t('flow.progress')} />
-            <p className="text-xs text-muted-foreground" aria-live="polite">{t('flow.stepOf', { n: index + 1, total })}</p>
           </div>
         )}
         <AnimatePresence mode="wait" initial={false} custom={dir}>

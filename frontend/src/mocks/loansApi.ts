@@ -212,7 +212,7 @@ export function calculateRate(input: RateRequest): RateResponse {
 
 export interface ApiResult { status: number; body: unknown }
 
-/** Pure router used by the Vite dev and preview servers. */
+/** Pure router used by the Vite dev server and the production Node server. */
 export function handleLoanApi(method: string, path: string, rawBody: string): ApiResult {
   const verb = method.toUpperCase();
   if (verb === 'GET' && path === '/api/loans/products') {
